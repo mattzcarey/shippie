@@ -14,6 +14,14 @@ Rules files help the AI reviewer understand your project's:
 
 These files are automatically discovered from standard locations and intelligently incorporated into the review prompt.
 
+## Rule Deduplication
+
+Shippie automatically deduplicates rules to avoid redundancy:
+
+- **Content-based**: Rules with identical content are automatically merged
+- **Description-based**: Rules with very similar descriptions are deduplicated
+- **Path preference**: When duplicates are found, more specific paths (e.g., `.cursor/rules/`) are preferred over root-level files
+
 ## Supported Directories
 
 Shippie searches for rules files in these directories:
@@ -21,8 +29,19 @@ Shippie searches for rules files in these directories:
 ```
 .cursor/rules/          # Cursor editor rules
 .shippie/rules/         # Shippie-specific rules
-.windsurfrules/         # Windsurf editor rules
+.windsurfrules/         # Windsurf editor rules (legacy)
+.windsurf/rules/        # Windsurf editor rules (preferred)
 clinerules/             # CLI-specific rules
+```
+
+## Root-Level Rules Files
+
+Additionally, these files in the project root are treated as rules files:
+
+```
+AGENTS.md               # AI agent instructions
+AGENT.md                # Alternative agent instructions  
+CLAUDE.md               # Claude-specific instructions
 ```
 
 ## Supported File Types
@@ -154,11 +173,8 @@ Keep components small and focused.
 
 ## Important Documentation Files
 
-Additionally, these files are automatically included in full if they exist:
+Additionally, these files are automatically included as documentation context if they exist:
 
-- `AGENTS.md` - AI agent instructions
-- `AGENT.md` - Alternative agent instructions
-- `CLAUDE.md` - Claude-specific instructions
 - `todo.md` - Project todos
 - `.same/todos.md` - Alternative todos location
 - `CONTRIBUTING.md` - Contribution guidelines
@@ -171,10 +187,14 @@ my-project/
 │   ├── typescript.mdc      # TS style rules
 │   ├── security.mdc        # Security requirements (alwaysApply: true)
 │   └── react.md           # React best practices
+├── .windsurf/rules/
+│   └── windsurf-specific.mdc # Windsurf editor rules
 ├── .shippie/rules/
 │   └── architecture.mdc    # Architecture patterns
-├── CLAUDE.md              # AI instructions
-├── CONTRIBUTING.md        # Contribution guide
+├── AGENTS.md              # AI agent instructions (rules file)
+├── CLAUDE.md              # Claude-specific instructions (rules file)
+├── CONTRIBUTING.md        # Contribution guide (documentation)
+├── todo.md                # Project todos (documentation)
 └── src/
     └── components/
 ```

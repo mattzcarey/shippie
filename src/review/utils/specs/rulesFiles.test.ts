@@ -138,28 +138,27 @@ Keep components small and focused.`
     const workspace = await createTempWorkspace()
 
     try {
-      const agentsContent = `# AI Agents Guide
+      const todoContent = `# Todo List
 
-This project uses AI agents for code review.
-Please follow these guidelines when working with agents.`
+- Fix bugs
+- Add features`
 
-      const claudeContent = `# Claude Instructions
+      const contributingContent = `# Contributing Guide
 
-Use concise responses.
-Focus on code quality.`
+Please follow these guidelines when contributing.`
 
-      await writeFile(join(workspace, 'AGENTS.md'), agentsContent)
-      await writeFile(join(workspace, 'CLAUDE.md'), claudeContent)
+      await writeFile(join(workspace, 'todo.md'), todoContent)
+      await writeFile(join(workspace, 'CONTRIBUTING.md'), contributingContent)
 
       const importantFiles = await findImportantFiles(workspace)
 
       expect(importantFiles).toHaveLength(2)
 
-      const agentsFile = importantFiles.find((f) => f.path === 'AGENTS.md')
-      const claudeFile = importantFiles.find((f) => f.path === 'CLAUDE.md')
+      const todoFile = importantFiles.find((f) => f.path === 'todo.md')
+      const contributingFile = importantFiles.find((f) => f.path === 'CONTRIBUTING.md')
 
-      expect(agentsFile?.content).toBe(agentsContent)
-      expect(claudeFile?.content).toBe(claudeContent)
+      expect(todoFile?.content).toBe(todoContent)
+      expect(contributingFile?.content).toBe(contributingContent)
     } finally {
       await cleanupTempWorkspace(workspace)
     }
@@ -255,5 +254,144 @@ Focus on code quality.`
   test('formatRulesContext returns empty string when no files found', () => {
     const context = formatRulesContext([], [])
     expect(context).toBe('')
+  })
+
+  test('findRulesFiles finds root-level rule files (AGENTS.md, AGENT.md, CLAUDE.md)', async () => {
+    const workspace = await createTempWorkspace()
+
+    try {
+      const agentsContent = `---
+description: AI Agents Guidelines
+globs: ["**/*.ts", "**/*.js"]
+alwaysApply: true
+---
+# AI Agents Guidelines
+
+Use AI agents responsibly.`
+
+      const agentContent = `# Agent Configuration
+
+This file contains agent-specific rules.`
+
+      const claudeContent = `---
+description: Claude Instructions
+---
+# Claude Instructions
+
+Be concise and helpful.`
+
+      await writeFile(join(workspace, 'AGENTS.md'), agentsContent)
+      await writeFile(join(workspace, 'AGENT.md'), agentContent)
+      await writeFile(join(workspace, 'CLAUDE.md'), claudeContent)
+
+      const rulesFiles = await findRulesFiles(workspace)
+
+      expect(rulesFiles).toHaveLength(3)
+
+      const agentsFile = rulesFiles.find((f) => f.path === 'AGENTS.md')
+      const agentFile = rulesFiles.find((f) => f.path === 'AGENT.md')
+      const claudeFile = rulesFiles.find((f) => f.path === 'CLAUDE.md')
+
+      expect(agentsFile?.type).toBe('md')
+      expect(agentsFile?.description).toBe('AI Agents Guidelines')
+      expect(agentsFile?.frontmatter?.alwaysApply).toBe(true)
+      expect(agentsFile?.frontmatter?.globs).toEqual(['**/*.ts', '**/*.js'])
+
+      expect(agentFile?.type).toBe('md')
+      expect(agentFile?.description).toContain('Agent Configuration')
+      expect(agentFile?.frontmatter).toBeUndefined()
+
+      expect(claudeFile?.type).toBe('md')
+      expect(claudeFile?.description).toBe('Claude Instructions')
+      expect(claudeFile?.frontmatter?.alwaysApply).toBeUndefined()
+    } finally {
+      await cleanupTempWorkspace(workspace)
+    }
+  })
+
+  test('findRulesFiles deduplicates rules by content hash', async () => {
+    const workspace = await createTempWorkspace()
+
+    try {
+      await mkdir(join(workspace, '.cursor', 'rules'), { recursive: true })
+
+      const duplicateContent = `# React Guidelines
+
+Always use functional components.`
+
+      // Create two files with identical content
+      await writeFile(join(workspace, '.cursor', 'rules', 'react1.md'), duplicateContent)
+      await writeFile(join(workspace, '.cursor', 'rules', 'react2.md'), duplicateContent)
+
+      const rulesFiles = await findRulesFiles(workspace)
+
+      // Should only return one rule due to deduplication
+      expect(rulesFiles).toHaveLength(1)
+      expect(rulesFiles[0].content.trim()).toBe(duplicateContent.trim())
+    } finally {
+      await cleanupTempWorkspace(workspace)
+    }
+  })
+
+  test('findRulesFiles deduplicates rules by similar descriptions, preferring more specific paths', async () => {
+    const workspace = await createTempWorkspace()
+
+    try {
+      await mkdir(join(workspace, '.cursor', 'rules'), { recursive: true })
+
+      const rootContent = `---
+description: React Guidelines
+---
+# React Guidelines
+
+Root level react rules.`
+
+      const specificContent = `---
+description: React Guidelines  
+---
+# React Guidelines
+
+More specific react rules from cursor directory.`
+
+      // Create files with same description but different specificity
+      await writeFile(join(workspace, 'AGENTS.md'), rootContent)
+      await writeFile(join(workspace, '.cursor', 'rules', 'react.md'), specificContent)
+
+      const rulesFiles = await findRulesFiles(workspace)
+
+      // Should keep the more specific one (.cursor/rules/react.md)
+      expect(rulesFiles).toHaveLength(1)
+      expect(rulesFiles[0].path).toBe('.cursor/rules/react.md')
+      expect(rulesFiles[0].content.trim()).toContain('More specific react rules')
+    } finally {
+      await cleanupTempWorkspace(workspace)
+    }
+  })
+
+  test('findImportantFiles no longer includes AGENTS.md, AGENT.md, CLAUDE.md', async () => {
+    const workspace = await createTempWorkspace()
+
+    try {
+      const agentsContent = `# AI Agents Guide`
+      const claudeContent = `# Claude Instructions`
+      const todoContent = `# Todo List`
+
+      await writeFile(join(workspace, 'AGENTS.md'), agentsContent)
+      await writeFile(join(workspace, 'CLAUDE.md'), claudeContent)
+      await writeFile(join(workspace, 'todo.md'), todoContent)
+
+      const importantFiles = await findImportantFiles(workspace)
+
+      // Should only include todo.md, not the agent/claude files
+      expect(importantFiles).toHaveLength(1)
+      expect(importantFiles[0].path).toBe('todo.md')
+
+      // Verify these files are now handled as rules files instead
+      const rulesFiles = await findRulesFiles(workspace)
+      expect(rulesFiles.some(f => f.path === 'AGENTS.md')).toBe(true)
+      expect(rulesFiles.some(f => f.path === 'CLAUDE.md')).toBe(true)
+    } finally {
+      await cleanupTempWorkspace(workspace)
+    }
   })
 })
