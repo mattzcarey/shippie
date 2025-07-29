@@ -27,6 +27,7 @@ const RULES_DIRECTORIES = [
   '.cursor/rules/*.{mdc,md}',
   '.shippie/rules/*.{mdc,md}',
   '.windsurfrules/*.{mdc,md}',
+  '.windsurf/rules/*.{mdc,md}',
   'clinerules/*.{mdc,md}',
 ]
 

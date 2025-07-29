@@ -21,7 +21,8 @@ Shippie searches for rules files in these directories:
 ```
 .cursor/rules/          # Cursor editor rules
 .shippie/rules/         # Shippie-specific rules
-.windsurfrules/         # Windsurf editor rules
+.windsurfrules/         # Windsurf editor rules (legacy)
+.windsurf/rules/        # Windsurf editor rules
 clinerules/             # CLI-specific rules
 ```
 

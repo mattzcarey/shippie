@@ -134,6 +134,32 @@ Keep components small and focused.`
     }
   })
 
+  test('findRulesFiles finds files in .windsurf/rules/ directory', async () => {
+    const workspace = await createTempWorkspace()
+
+    try {
+      await mkdir(join(workspace, '.windsurf', 'rules'), { recursive: true })
+
+      const mdContent = `# TypeScript Guidelines
+      
+Use strict mode and proper typing.
+Prefer interfaces over types for object shapes.
+Always specify return types for functions.`
+
+      await writeFile(join(workspace, '.windsurf', 'rules', 'typescript.md'), mdContent)
+
+      const rulesFiles = await findRulesFiles(workspace)
+
+      expect(rulesFiles).toHaveLength(1)
+      expect(rulesFiles[0].path).toBe('.windsurf/rules/typescript.md')
+      expect(rulesFiles[0].type).toBe('md')
+      expect(rulesFiles[0].description).toContain('TypeScript Guidelines')
+      expect(rulesFiles[0].frontmatter).toBeUndefined()
+    } finally {
+      await cleanupTempWorkspace(workspace)
+    }
+  })
+
   test('findImportantFiles finds and reads important documentation', async () => {
     const workspace = await createTempWorkspace()
 
