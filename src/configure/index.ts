@@ -60,7 +60,9 @@ const configureGitHub = async () => {
     try {
       execSync('gh auth status || gh auth login', { stdio: 'inherit' })
       execSync(`gh secret set OPENAI_API_KEY --body=${String(apiKey)}`)
-      logger.info('Successfully added the OPENAI_API_KEY secret to your GitHub repository.')
+      logger.info(
+        'Successfully added the OPENAI_API_KEY secret to your GitHub repository.'
+      )
     } catch (error) {
       logger.error(
         "It seems that the GitHub CLI is not installed or there was an error during authentication. Don't forget to add the OPENAI_API_KEY to the repo settings/Environment/Actions/Repository Secrets manually."
