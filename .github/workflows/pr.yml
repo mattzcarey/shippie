@@ -45,7 +45,7 @@ jobs:
         uses: ./
 
       - name: Run shippie review
-        run: bun review --platform=github --modelString=openai:gpt-4.1 --baseUrl=https://models.github.ai/inference --debug
+        run: bun review --platform=github --modelString=openai:gpt-4.1-mini --baseUrl=https://models.github.ai/inference --debug
 
       - name: Run e2e tests (optional)
         run: bun test:e2e

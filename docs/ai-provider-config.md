@@ -31,6 +31,8 @@ Or manually configure your workflow:
     OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}  # GitHub Models uses GITHUB_TOKEN as API key
 ```
 
+You can also try this locally by generating a Personal Access Token (classic) and using that as the API key.
+
 ## Azure OpenAI Provider
 
 This section will guide you through configuring and using the Azure OpenAI provider in your Code Review project, which leverages Large Language Models (LLMs) to enhance your code quality and prevent bugs before they reach production.

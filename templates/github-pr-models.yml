@@ -26,7 +26,7 @@ jobs:
         run: bun i shippie
 
       - name: Run shippie review
-        run: bun shippie review --platform=github --modelString=openai:gpt-4o-mini --baseUrl=https://models.github.ai/inference
+        run: bun shippie review --platform=github --modelString=openai:gpt-4.1-mini --baseUrl=https://models.github.ai/inference
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
