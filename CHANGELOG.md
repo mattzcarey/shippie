@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.19.0](https://github.com/mattzcarey/shippie/compare/v0.18.0...v0.19.0) (2025-07-31)
+
+
+### Features
+
+* **models:** Add Github Models support ([#456](https://github.com/mattzcarey/shippie/issues/456)) ([f2e4e45](https://github.com/mattzcarey/shippie/commit/f2e4e4549f0786d4aa927f81b5198843865ae3b9))
+
+
+### Bug Fixes
+
+* claude code workflow ([2b8ab84](https://github.com/mattzcarey/shippie/commit/2b8ab84506bb3cd5bc9988ce7bb6f9217a05ac24))
+
 ## [0.18.0](https://github.com/mattzcarey/shippie/compare/v0.17.1...v0.18.0) (2025-06-08)
 
 
