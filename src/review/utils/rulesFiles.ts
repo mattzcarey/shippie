@@ -1,6 +1,6 @@
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { createHash } from 'node:crypto'
 import matter from 'gray-matter'
 import { glob } from 'tinyglobby'
 import { logger } from '../../common/utils/logger'
@@ -35,11 +35,7 @@ const RULES_DIRECTORIES = [
   'CLAUDE.md',
 ]
 
-const IMPORTANT_FILES = [
-  'todo.md',
-  '.same/todos.md',
-  'CONTRIBUTING.md',
-]
+const IMPORTANT_FILES = ['todo.md', '.same/todos.md', 'CONTRIBUTING.md']
 
 const getFirstLinesDescription = (content: string, maxLines = 3): string => {
   const lines = content.split('\n').filter((line) => line.trim())
@@ -74,39 +70,43 @@ const deduplicateRules = (rules: RuleFile[]): RuleFile[] => {
 
   for (const rule of rules) {
     const contentHash = generateContentHash(rule.content)
-    
+
     // Skip if we've seen this exact content before
     if (seen.has(contentHash)) {
       logger.debug(`Skipping duplicate rule content from ${rule.path}`)
       continue
     }
-    
+
     // Check for very similar descriptions (likely duplicates)
     const normalizedDesc = rule.description.toLowerCase().trim()
     const existingRule = seenDescriptions.get(normalizedDesc)
-    
+
     if (existingRule) {
       // Keep the rule with more specific path (prefer specific directories over root files)
       const currentSpecificity = rule.path.split('/').length
       const existingSpecificity = existingRule.path.split('/').length
-      
+
       if (currentSpecificity > existingSpecificity) {
         // Replace the existing rule with the more specific one
-        const existingIndex = deduplicated.findIndex(r => r.path === existingRule.path)
+        const existingIndex = deduplicated.findIndex((r) => r.path === existingRule.path)
         if (existingIndex !== -1) {
           deduplicated[existingIndex] = rule
           seenDescriptions.set(normalizedDesc, rule)
-          logger.debug(`Replacing rule from ${existingRule.path} with more specific rule from ${rule.path}`)
+          logger.debug(
+            `Replacing rule from ${existingRule.path} with more specific rule from ${rule.path}`
+          )
         }
       } else {
-        logger.debug(`Skipping rule from ${rule.path}, already have similar rule from ${existingRule.path}`)
+        logger.debug(
+          `Skipping rule from ${rule.path}, already have similar rule from ${existingRule.path}`
+        )
         continue
       }
     } else {
       seenDescriptions.set(normalizedDesc, rule)
       deduplicated.push(rule)
     }
-    
+
     seen.add(contentHash)
   }
 

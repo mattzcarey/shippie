@@ -372,9 +372,9 @@ More specific react rules from cursor directory.`
     const workspace = await createTempWorkspace()
 
     try {
-      const agentsContent = `# AI Agents Guide`
-      const claudeContent = `# Claude Instructions`
-      const todoContent = `# Todo List`
+      const agentsContent = '# AI Agents Guide'
+      const claudeContent = '# Claude Instructions'
+      const todoContent = '# Todo List'
 
       await writeFile(join(workspace, 'AGENTS.md'), agentsContent)
       await writeFile(join(workspace, 'CLAUDE.md'), claudeContent)
@@ -388,8 +388,8 @@ More specific react rules from cursor directory.`
 
       // Verify these files are now handled as rules files instead
       const rulesFiles = await findRulesFiles(workspace)
-      expect(rulesFiles.some(f => f.path === 'AGENTS.md')).toBe(true)
-      expect(rulesFiles.some(f => f.path === 'CLAUDE.md')).toBe(true)
+      expect(rulesFiles.some((f) => f.path === 'AGENTS.md')).toBe(true)
+      expect(rulesFiles.some((f) => f.path === 'CLAUDE.md')).toBe(true)
     } finally {
       await cleanupTempWorkspace(workspace)
     }
