@@ -16,6 +16,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       GITHUB_SHA: ${{ github.sha }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +47,8 @@ jobs:
 
       - name: Run shippie review
         run: bun review --platform=github --modelString=openai:gpt-4.1-mini --baseUrl=https://models.github.ai/inference --debug
+        env:
+          OPENAI_API_KEY: ${{ env.GITHUB_TOKEN }}
 
       - name: Run e2e tests (optional)
         run: bun test:e2e
