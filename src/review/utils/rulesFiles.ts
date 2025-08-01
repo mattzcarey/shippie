@@ -11,7 +11,7 @@ interface MdcRuleFrontmatter {
   alwaysApply?: boolean
 }
 
-interface RuleFile {
+export interface RuleFile {
   path: string
   type: 'mdc' | 'md'
   frontmatter?: MdcRuleFrontmatter
@@ -19,7 +19,7 @@ interface RuleFile {
   content: string
 }
 
-interface ImportantFile {
+export interface ImportantFile {
   path: string
   content: string
 }

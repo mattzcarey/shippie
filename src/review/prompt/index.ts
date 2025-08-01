@@ -1,6 +1,10 @@
 import { getGitRoot } from '../../common/git/getChangedFilesNames'
+import { getMaxPromptLength } from '../../common/llm/promptLength'
 import type { ReviewFile } from '../../common/types'
+import { logger } from '../../common/utils/logger'
 import {
+  type ImportantFile,
+  type RuleFile,
   findImportantFiles,
   findRulesFiles,
   formatRulesContext,
@@ -9,10 +13,96 @@ import { createFileInfo } from './fileInfo'
 import { instructionPrompt } from './prompts'
 import { getLanguageName } from './utils/fileLanguage'
 
+const truncateRulesContext = (
+  rulesFiles: RuleFile[],
+  importantFiles: ImportantFile[],
+  maxLength: number
+): string => {
+  if (maxLength <= 0) return ''
+
+  let context = '\n\n// Project Context\n'
+  let remainingLength = maxLength - context.length
+
+  const briefRules = rulesFiles.filter((rule) => !rule.frontmatter?.alwaysApply)
+  const alwaysApplyRules = rulesFiles.filter((rule) => rule.frontmatter?.alwaysApply)
+
+  if (briefRules.length > 0 && remainingLength > 50) {
+    const briefSection = 'See these rules files for more info:\n'
+    context += briefSection
+    remainingLength -= briefSection.length
+
+    for (const rule of briefRules) {
+      const ruleText = `- ${rule.path}: ${rule.description}\n`
+      const globsText = rule.frontmatter?.globs?.length
+        ? `  Applies to: ${rule.frontmatter.globs.join(', ')}\n`
+        : ''
+      const totalRuleText = ruleText + globsText
+
+      if (remainingLength >= totalRuleText.length) {
+        context += totalRuleText
+        remainingLength -= totalRuleText.length
+      }
+    }
+    context += '\n'
+    remainingLength -= 1
+  }
+
+  if (alwaysApplyRules.length > 0 && remainingLength > 100) {
+    const alwaysApplySection = 'Always-apply rules (truncated if needed):\n'
+    context += alwaysApplySection
+    remainingLength -= alwaysApplySection.length
+
+    for (const rule of alwaysApplyRules) {
+      const header = `\n## ${rule.path}\n`
+      if (remainingLength >= header.length + 50) {
+        context += header
+        remainingLength -= header.length
+
+        const availableForContent = remainingLength - 50
+        const truncatedContent =
+          rule.content.length > availableForContent
+            ? `${rule.content.slice(0, availableForContent)}...\n`
+            : `${rule.content}\n`
+
+        context += truncatedContent
+        remainingLength -= truncatedContent.length
+      }
+    }
+  }
+
+  if (importantFiles.length > 0 && remainingLength > 100) {
+    const importantSection = 'Important project documentation (truncated if needed):\n'
+    if (remainingLength >= importantSection.length) {
+      context += importantSection
+      remainingLength -= importantSection.length
+
+      for (const file of importantFiles) {
+        const header = `\n## ${file.path}\n`
+        if (remainingLength >= header.length + 50) {
+          context += header
+          remainingLength -= header.length
+
+          const availableForContent = remainingLength - 50
+          const truncatedContent =
+            file.content.length > availableForContent
+              ? `${file.content.slice(0, availableForContent)}...\n`
+              : `${file.content}\n`
+
+          context += truncatedContent
+          remainingLength -= truncatedContent.length
+        }
+      }
+    }
+  }
+
+  return context
+}
+
 export const constructPrompt = async (
   files: ReviewFile[],
   reviewLanguage: string,
-  customInstructions?: string
+  customInstructions?: string,
+  modelString?: string
 ): Promise<string> => {
   const workspaceRoot = await getGitRoot()
 
@@ -35,5 +125,22 @@ export const constructPrompt = async (
     ? `\n\n// Custom Instructions\n${customInstructions}\n`
     : ''
 
-  return `${languageToInstructionPrompt}${customInstructionsSection}${rulesContext}\n${fileInfo}`
+  const prompt = `${languageToInstructionPrompt}${customInstructionsSection}${rulesContext}\n${fileInfo}`
+
+  if (modelString) {
+    const maxLength = getMaxPromptLength(modelString)
+    if (prompt.length > maxLength) {
+      logger.warn(
+        `Prompt length (${prompt.length} chars) exceeds model limit (${maxLength} chars). Truncating rules context.`
+      )
+      const truncatedRulesContext = truncateRulesContext(
+        rulesFiles,
+        importantFiles,
+        maxLength - (prompt.length - rulesContext.length)
+      )
+      return `${languageToInstructionPrompt}${customInstructionsSection}${truncatedRulesContext}\n${fileInfo}`
+    }
+  }
+
+  return prompt
 }
