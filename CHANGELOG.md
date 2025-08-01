@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/mattzcarey/shippie/compare/v0.19.0...v0.20.0) (2025-08-01)
+
+
+### Features
+
+* add support for root-level rules files and deduplication ([#457](https://github.com/mattzcarey/shippie/issues/457)) ([511680e](https://github.com/mattzcarey/shippie/commit/511680e8d2b43a9902df06194423d5afd1398486))
+
 ## [0.19.0](https://github.com/mattzcarey/shippie/compare/v0.18.0...v0.19.0) (2025-07-31)
 
 
