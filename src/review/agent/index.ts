@@ -7,8 +7,8 @@ import { logger } from '../../common/utils/logger'
 import type { TokenUsage, ToolCall } from '../types'
 import { reviewAgent } from './generate'
 
-// biome-ignore lint/suspicious/noExplicitAny: This matches the GenerateTextResult type used elsewhere
 const summarizeAttemptContext = (
+  // biome-ignore lint/suspicious/noExplicitAny: This matches the GenerateTextResult type used elsewhere
   result: GenerateTextResult<Record<string, any>, string>,
   attempt: number
 ): string => {
