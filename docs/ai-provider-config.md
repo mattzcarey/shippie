@@ -1,6 +1,6 @@
 # Provider Configuration
 
-Shippie support OpenAI, Anthropic, Google Gemini and local models through an OpenAI compatible API.
+Shippie supports OpenAI, Anthropic, Google Gemini, GitHub Models, and local models through an OpenAI compatible API.
 
 Just change the `modelString` to the model you want to use.
 
@@ -10,6 +10,28 @@ eg.
 - name: Run shippie review
   run: bun review --platform=github --modelString=azure:gpt-4o
 ```
+
+## GitHub Models
+
+GitHub Models provides free access to AI models directly in GitHub Actions using the built-in `GITHUB_TOKEN`. This is the easiest setup option as it requires no additional API keys or secrets.
+
+### Usage
+
+When configuring shippie with `npx shippie configure --platform=github`, choose the GitHub Models option for automatic setup.
+
+Or manually configure your workflow:
+
+```yaml
+- name: Run shippie review
+  run: bun shippie review --platform=github --modelString=openai:gpt-4o-mini --baseUrl=https://models.github.ai/inference
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    GITHUB_SHA: ${{ github.sha }}
+    OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}  # GitHub Models uses GITHUB_TOKEN as API key
+```
+
+You can also try this locally by generating a Personal Access Token (classic) and using that as the API key.
 
 ## Azure OpenAI Provider
 

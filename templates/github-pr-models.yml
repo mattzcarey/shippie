@@ -1,0 +1,34 @@
+name: Shippie 🚢
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
+  models: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install shippie
+        run: bun i shippie
+
+      - name: Run shippie review
+        run: bun shippie review --platform=github --modelString=openai:gpt-4.1-mini --baseUrl=https://models.github.ai/inference
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_SHA: ${{ github.sha }}
+          OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}
