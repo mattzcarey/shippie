@@ -127,20 +127,51 @@ export const constructPrompt = async (
 
   const prompt = `${languageToInstructionPrompt}${customInstructionsSection}${rulesContext}\n${fileInfo}`
 
+  logger.debug('Prompt component sizes:')
+  logger.debug(`  - Base instruction: ${languageToInstructionPrompt.length} chars`)
+  logger.debug(`  - Custom instructions: ${customInstructionsSection.length} chars`)
+  logger.debug(`  - Rules context: ${rulesContext.length} chars`)
+  logger.debug(`  - File info: ${fileInfo.length} chars`)
+  logger.debug(
+    `  - Total initial: ${prompt.length} chars (~${Math.round(prompt.length / 3)} tokens)`
+  )
+
   if (modelString) {
     const maxLength = getMaxPromptLength(modelString)
+    logger.debug(`Model ${modelString} max length: ${maxLength} chars`)
+
     if (prompt.length > maxLength) {
       logger.warn(
         `Prompt length (${prompt.length} chars) exceeds model limit (${maxLength} chars). Truncating rules context.`
       )
+      const availableForRules = maxLength - (prompt.length - rulesContext.length)
+      logger.debug(
+        `Available space for rules context: ${availableForRules} chars (was ${rulesContext.length} chars)`
+      )
+
       const truncatedRulesContext = truncateRulesContext(
         rulesFiles,
         importantFiles,
-        maxLength - (prompt.length - rulesContext.length)
+        availableForRules
       )
-      return `${languageToInstructionPrompt}${customInstructionsSection}${truncatedRulesContext}\n${fileInfo}`
+      const finalPrompt = `${languageToInstructionPrompt}${customInstructionsSection}${truncatedRulesContext}\n${fileInfo}`
+
+      logger.info(`Prompt truncated from ${prompt.length} to ${finalPrompt.length} chars`)
+
+      if (finalPrompt.length > maxLength) {
+        logger.error(
+          `Even after truncation, prompt is still too large: ${finalPrompt.length} chars > ${maxLength} chars`
+        )
+        logger.error('This suggests the base prompt + file info exceeds model limits')
+        logger.error(
+          `Base components: instruction(${languageToInstructionPrompt.length}) + custom(${customInstructionsSection.length}) + fileInfo(${fileInfo.length}) = ${languageToInstructionPrompt.length + customInstructionsSection.length + fileInfo.length} chars`
+        )
+      }
+
+      return finalPrompt
     }
   }
 
+  logger.debug(`Final prompt length: ${prompt.length} chars`)
   return prompt
 }
