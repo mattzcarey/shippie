@@ -22,6 +22,11 @@ When configuring shippie with `npx shippie configure --platform=github`, choose 
 Or manually configure your workflow:
 
 ```yaml
+permissions:
+  models: read
+```
+
+```yaml
 - name: Run shippie review
   run: bun shippie review --platform=github --modelString=openai:gpt-4o-mini --baseUrl=https://models.github.ai/inference
   env:
