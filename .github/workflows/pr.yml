@@ -8,17 +8,15 @@ permissions:
   pull-requests: write
   contents: read
   actions: read
-  models: read
 
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
-
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GITHUB_SHA: ${{ github.sha }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
-      OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_SHA: ${{ github.sha }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -46,13 +44,9 @@ jobs:
 
       - name: Run shippie review action
         uses: ./
-        with:
-          MODEL_STRING: openai:gpt-4.1-mini
-          REVIEW_LANGUAGE: English
-          BASE_URL: https://models.github.ai/inference
 
       - name: Run shippie review
-        run: bun review --platform=github --modelString=openai:gpt-4.1-mini --baseUrl=https://models.github.ai/inference --debug
+        run: bun review --platform=github --debug
 
       - name: Run e2e tests (optional)
         run: bun test:e2e

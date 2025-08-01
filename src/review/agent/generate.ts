@@ -14,27 +14,22 @@ export const reviewAgent = async (
   onSummarySubmit?: () => void
   // biome-ignore lint/suspicious/noExplicitAny: fine
 ): Promise<GenerateTextResult<Record<string, any>, string>> => {
-  try {
-    return await generateText({
-      model,
-      prompt,
-      tools,
-      maxSteps,
-      onStepFinish: (step) => {
-        logger.debug('Step finished:', step)
+  return generateText({
+    model,
+    prompt,
+    tools,
+    maxSteps,
+    onStepFinish: (step) => {
+      logger.debug('Step finished:', step)
 
-        const summaryToolUsed = step.toolCalls.some(
-          (tc) => tc.toolName === 'submit_summary'
-        )
+      const summaryToolUsed = step.toolCalls.some(
+        (tc) => tc.toolName === 'submit_summary'
+      )
 
-        if (summaryToolUsed && onSummarySubmit) {
-          logger.debug('Detected submit_summary tool usage in step, triggering callback.')
-          onSummarySubmit()
-        }
-      },
-    })
-  } catch (error) {
-    logger.error('Prompt content preview:', `${prompt.slice(0, 500)}...[truncated]`)
-    throw error
-  }
+      if (summaryToolUsed && onSummarySubmit) {
+        logger.debug('Detected submit_summary tool usage in step, triggering callback.')
+        onSummarySubmit()
+      }
+    },
+  })
 }

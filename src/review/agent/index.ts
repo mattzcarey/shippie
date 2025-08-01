@@ -7,29 +7,6 @@ import { logger } from '../../common/utils/logger'
 import type { TokenUsage, ToolCall } from '../types'
 import { reviewAgent } from './generate'
 
-const summarizeAttemptContext = (
-  // biome-ignore lint/suspicious/noExplicitAny: This matches the GenerateTextResult type used elsewhere
-  result: GenerateTextResult<Record<string, any>, string>,
-  attempt: number
-): string => {
-  const toolSummaries = result.toolResults
-    .map((res: { toolName: string; result: unknown }) => {
-      const resultPreview =
-        typeof res.result === 'string'
-          ? res.result.slice(0, 100) + (res.result.length > 100 ? '...' : '')
-          : `[${typeof res.result}]`
-      return `${res.toolName}: ${resultPreview}`
-    })
-    .slice(0, 5)
-    .join('; ')
-
-  const textPreview = result.text
-    ? result.text.slice(0, 150) + (result.text.length > 150 ? '...' : '')
-    : 'No text output'
-
-  return `\n--- Attempt ${attempt} Summary ---\nTools: ${toolSummaries}\nOutput: ${textPreview}\n`
-}
-
 export const runAgenticReview = async (
   initialPrompt: string,
   model: LanguageModelV1,
@@ -87,16 +64,13 @@ export const runAgenticReview = async (
     logger.warn(`Agent did not submit summary on attempt ${attempt}.`)
 
     if (attempt < maxRetries) {
-      const attemptSummary = summarizeAttemptContext(latestResult, attempt)
-      accumulatedContext += attemptSummary
-
-      const maxAccumulatedLength = 2000
-      if (accumulatedContext.length > maxAccumulatedLength) {
-        const contextLines = accumulatedContext.split('\n')
-        const truncatedLines = contextLines.slice(-20)
-        accumulatedContext = `[Previous context truncated...]\n${truncatedLines.join('\n')}`
-      }
-
+      const attemptContext = latestResult.toolResults
+        .map((res) => `Tool Result (${res.toolName}): ${JSON.stringify(res.result)}`)
+        .join('\n')
+      const finalTextContext = latestResult.text
+        ? `\nFinal Text: ${latestResult.text}`
+        : ''
+      accumulatedContext += `\n\n--- Attempt ${attempt} Context ---\n${attemptContext}${finalTextContext}\n--- End Attempt ${attempt} Context ---`
       currentPrompt = `${initialPrompt}${accumulatedContext}\n\nPlease continue the task based on previous attempts and ensure you call submit_summary.`
       logger.info(`Preparing for attempt ${attempt + 1}.`)
     }

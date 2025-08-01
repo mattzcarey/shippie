@@ -30,8 +30,7 @@ export class ScenarioRunner {
     const prompt = await constructPrompt(
       reviewFiles,
       'English',
-      scenario.input.customInstructions,
-      'openai:gpt-4.1-mini'
+      scenario.input.customInstructions
     )
 
     let tools: Record<string, Tool>

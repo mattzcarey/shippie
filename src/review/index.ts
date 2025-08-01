@@ -53,8 +53,7 @@ export const review = async (yargs: ReviewArgs): Promise<void> => {
   const prompt = await constructPrompt(
     filteredFiles,
     yargs.reviewLanguage,
-    yargs.customInstructions,
-    yargs.modelString
+    yargs.customInstructions
   )
   logger.debug('Prompt:', prompt)
 
