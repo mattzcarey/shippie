@@ -1,25 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useStyletron } from 'baseui'
-import Prism from 'prismjs'
-import 'prismjs/themes/prism-tomorrow.css'
-
-// Import common language support
-import 'prismjs/components/prism-typescript'
-import 'prismjs/components/prism-javascript'
-import 'prismjs/components/prism-jsx'
-import 'prismjs/components/prism-tsx'
-import 'prismjs/components/prism-json'
-import 'prismjs/components/prism-css'
-import 'prismjs/components/prism-scss'
-import 'prismjs/components/prism-bash'
-import 'prismjs/components/prism-python'
-import 'prismjs/components/prism-yaml'
-import 'prismjs/components/prism-markdown'
-import 'prismjs/components/prism-go'
-import 'prismjs/components/prism-rust'
-import 'prismjs/components/prism-java'
-import 'prismjs/components/prism-c'
-import 'prismjs/components/prism-cpp'
+import { createStarryNight, common } from '@wooorm/starry-night'
+import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 
 type SyntaxHighlightedCodeProps = {
   code: string
@@ -42,9 +25,9 @@ const getLanguageFromFileName = (fileName: string): string => {
     jsx: 'jsx',
     json: 'json',
     css: 'css',
-    scss: 'scss',
-    sh: 'bash',
-    bash: 'bash',
+    scss: 'css',
+    sh: 'shell',
+    bash: 'shell',
     py: 'python',
     yml: 'yaml',
     yaml: 'yaml',
@@ -68,16 +51,40 @@ export const SyntaxHighlightedCode = ({
   diffLines,
 }: SyntaxHighlightedCodeProps) => {
   const [css] = useStyletron()
-  const codeRef = useRef<HTMLElement>(null)
+  const [starryNight, setStarryNight] = useState<Awaited<ReturnType<typeof createStarryNight>> | null>(null)
   const language = getLanguageFromFileName(fileName)
 
+  // Initialize starry-night
   useEffect(() => {
-    if (codeRef.current) {
-      Prism.highlightElement(codeRef.current)
-    }
-  }, [code, language])
+    createStarryNight(common).then(setStarryNight)
+  }, [])
 
   const lines = code.split('\n')
+
+  // Generate highlighted React nodes for each line
+  const highlightedLines = useMemo(() => {
+    if (!starryNight) {
+      // Return plain text while loading
+      return lines.map(line => line)
+    }
+
+    const scope = starryNight.flagToScope(language)
+
+    if (!scope) {
+      // Fallback to plain text if language not supported
+      return lines.map(line => line)
+    }
+
+    return lines.map(line => {
+      try {
+        const tree = starryNight.highlight(line, scope)
+        return toJsxRuntime(tree, { Fragment, jsx, jsxs })
+      } catch {
+        // Fallback to plain text if highlighting fails
+        return line
+      }
+    })
+  }, [starryNight, language, lines])
 
   return (
     <div className={css({
@@ -86,6 +93,7 @@ export const SyntaxHighlightedCode = ({
       overflow: 'hidden',
       border: '1px solid #3f3f46',
     })}>
+      <link rel="stylesheet" href="https://esm.sh/@wooorm/starry-night@3/style/dark" />
       <div className={css({
         display: 'grid',
         gridTemplateColumns: showLineNumbers ? 'auto 1fr' : '1fr',
@@ -124,8 +132,7 @@ export const SyntaxHighlightedCode = ({
         )}
 
         {/* Code content with syntax highlighting */}
-        <pre className={css({
-          margin: 0,
+        <div className={css({
           padding: '12px',
           fontSize: '12px',
           fontFamily: 'monospace',
@@ -133,16 +140,18 @@ export const SyntaxHighlightedCode = ({
           lineHeight: '1.5',
           backgroundColor: 'transparent',
         })}>
-          <code
-            ref={codeRef}
-            className={`language-${language}`}
-            style={{
-              backgroundColor: 'transparent',
-            }}
-          >
-            {code}
-          </code>
-        </pre>
+          {highlightedLines.map((highlightedLine, i) => (
+            <div
+              key={i}
+              className={css({
+                whiteSpace: 'pre',
+                color: '#fafafa',
+              })}
+            >
+              {highlightedLine}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

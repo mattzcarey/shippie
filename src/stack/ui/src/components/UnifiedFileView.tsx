@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect } from 'react'
 import { useStyletron } from 'baseui'
 import type { Hunk } from '../types'
 import { createStarryNight, common } from '@wooorm/starry-night'
-import { toHtml } from 'hast-util-to-html'
+import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 
 type LineType = 'normal' | 'added' | 'removed' | 'modified'
 
@@ -10,7 +11,7 @@ type LineInfo = {
   lineNumber: number
   content: string
   type: LineType
-  highlighted: string
+  highlighted: React.ReactNode
 }
 
 type UnifiedFileViewProps = {
@@ -19,31 +20,70 @@ type UnifiedFileViewProps = {
   hunks: Hunk[]
 }
 
-const parseHunksToLineInfo = (hunks: Hunk[]): Map<number, LineType> => {
-  const lineMap = new Map<number, LineType>()
+// Build a unified view with both additions and deletions
+const buildUnifiedLines = (fileContent: string, hunks: Hunk[]): LineInfo[] => {
+  const lines = fileContent.split('\n')
 
+  // First, add all current file lines
+  const fileLineMap = new Map<number, LineInfo>()
+  lines.forEach((content, idx) => {
+    const lineNumber = idx + 1
+    fileLineMap.set(lineNumber, {
+      lineNumber,
+      content,
+      type: 'normal',
+      highlighted: content,
+    })
+  })
+
+  // Now process hunks to find additions and mark where deletions should go
   for (const hunk of hunks) {
-    const lines = hunk.content.split('\n')
+    const hunkLines = hunk.content.split('\n')
     let currentNewLine = hunk.newStart
+    const deletionsBeforeLine: Map<number, string[]> = new Map()
 
-    for (const line of lines) {
+    for (const line of hunkLines) {
       if (line.startsWith('@@')) continue
 
-      if (line.startsWith('+')) {
-        // Line was added
-        lineMap.set(currentNewLine, 'added')
+      if (line.startsWith('-')) {
+        // Deletion - will be shown before the current line
+        const deletedContent = line.substring(1)
+        if (!deletionsBeforeLine.has(currentNewLine)) {
+          deletionsBeforeLine.set(currentNewLine, [])
+        }
+        deletionsBeforeLine.get(currentNewLine)!.push(deletedContent)
+      } else if (line.startsWith('+')) {
+        // Addition - mark this line as added
+        const existingLine = fileLineMap.get(currentNewLine)
+        if (existingLine) {
+          existingLine.type = 'added'
+        }
         currentNewLine++
-      } else if (line.startsWith('-')) {
-        // Line was removed - we don't show these in the unified view
-        // since we're showing the current state of the file
       } else if (line.startsWith(' ')) {
-        // Context line - unchanged
+        // Context line
         currentNewLine++
       }
     }
+
+    // Insert deletions before their corresponding lines
+    deletionsBeforeLine.forEach((deletedLines, lineNumber) => {
+      const existingLine = fileLineMap.get(lineNumber)
+      if (existingLine) {
+        // Add deletion markers
+        deletedLines.forEach((content, idx) => {
+          fileLineMap.set(lineNumber - 0.5 - idx * 0.1, {
+            lineNumber: lineNumber - 0.5 - idx * 0.1,
+            content,
+            type: 'removed',
+            highlighted: content,
+          })
+        })
+      }
+    })
   }
 
-  return lineMap
+  // Sort by line number and return
+  return Array.from(fileLineMap.values()).sort((a, b) => a.lineNumber - b.lineNumber)
 }
 
 const getLanguageFromFileName = (fileName: string): string => {
@@ -76,55 +116,35 @@ export const UnifiedFileView = ({ fileName, fileContent, hunks }: UnifiedFileVie
   }, [])
 
   const lineInfos = useMemo((): LineInfo[] => {
+    // Build unified view with additions and deletions
+    const unifiedLines = buildUnifiedLines(fileContent, hunks)
+
     if (!starryNight) {
       // Return plain text while loading
-      const lineTypeMap = parseHunksToLineInfo(hunks)
-      const lines = fileContent.split('\n')
-      return lines.map((content, idx) => ({
-        lineNumber: idx + 1,
-        content,
-        type: lineTypeMap.get(idx + 1) || 'normal',
-        highlighted: content,
-      }))
+      return unifiedLines
     }
 
-    const lineTypeMap = parseHunksToLineInfo(hunks)
-    const lines = fileContent.split('\n')
     const language = getLanguageFromFileName(fileName)
     const scope = starryNight.flagToScope(language)
 
-    return lines.map((content, idx) => {
-      const lineNumber = idx + 1
-      const type = lineTypeMap.get(lineNumber) || 'normal'
+    if (!scope) {
+      // Fallback to plain text if language not supported
+      return unifiedLines
+    }
 
-      if (!scope) {
-        // Fallback to plain text if language not supported
-        return {
-          lineNumber,
-          content,
-          type,
-          highlighted: content,
-        }
-      }
-
+    // Apply syntax highlighting to each line
+    return unifiedLines.map(line => {
       try {
-        const tree = starryNight.highlight(content, scope)
-        const highlighted = toHtml(tree)
+        const tree = starryNight.highlight(line.content, scope)
+        const highlighted = toJsxRuntime(tree, { Fragment, jsx, jsxs })
 
         return {
-          lineNumber,
-          content,
-          type,
+          ...line,
           highlighted,
         }
       } catch {
         // Fallback to plain text if highlighting fails
-        return {
-          lineNumber,
-          content,
-          type,
-          highlighted: content,
-        }
+        return line
       }
     })
   }, [fileContent, hunks, fileName, starryNight])
@@ -137,11 +157,8 @@ export const UnifiedFileView = ({ fileName, fileContent, hunks }: UnifiedFileVie
       backgroundColor: '#18181b',
       overflow: 'auto',
     })}>
-      <style>{`
-        /* Starry-night CSS - GitHub dark theme */
-        @import url('https://esm.sh/@wooorm/starry-night@3/style/dark');
-      `}</style>
-      {lineInfos.map((lineInfo) => {
+      <link rel="stylesheet" href="https://esm.sh/@wooorm/starry-night@3/style/dark" />
+      {lineInfos.map((lineInfo, idx) => {
         const backgroundColor =
           lineInfo.type === 'added' ? '#052e16' :
           lineInfo.type === 'removed' ? '#450a0a' :
@@ -152,9 +169,13 @@ export const UnifiedFileView = ({ fileName, fileContent, hunks }: UnifiedFileVie
           lineInfo.type === 'removed' ? '#ef4444' :
           'transparent'
 
+        const lineNumberDisplay = Number.isInteger(lineInfo.lineNumber)
+          ? lineInfo.lineNumber.toString()
+          : '' // Don't show line number for removed lines (they have fractional line numbers)
+
         return (
           <div
-            key={lineInfo.lineNumber}
+            key={`${lineInfo.lineNumber}-${idx}`}
             className={css({
               display: 'flex',
               backgroundColor,
@@ -172,7 +193,21 @@ export const UnifiedFileView = ({ fileName, fileContent, hunks }: UnifiedFileVie
               userSelect: 'none',
               flexShrink: 0,
             })}>
-              {lineInfo.lineNumber}
+              {lineNumberDisplay}
+            </span>
+
+            {/* Type indicator for removed/added lines */}
+            <span className={css({
+              display: 'inline-block',
+              width: '20px',
+              textAlign: 'center',
+              paddingRight: '8px',
+              color: lineInfo.type === 'added' ? '#10b981' : lineInfo.type === 'removed' ? '#ef4444' : 'transparent',
+              userSelect: 'none',
+              flexShrink: 0,
+              fontWeight: 'bold',
+            })}>
+              {lineInfo.type === 'added' ? '+' : lineInfo.type === 'removed' ? '-' : ''}
             </span>
 
             {/* Code content with syntax highlighting */}
@@ -183,8 +218,9 @@ export const UnifiedFileView = ({ fileName, fileContent, hunks }: UnifiedFileVie
                 overflowWrap: 'normal',
                 color: '#fafafa',
               })}
-              dangerouslySetInnerHTML={{ __html: lineInfo.highlighted }}
-            />
+            >
+              {lineInfo.highlighted}
+            </span>
           </div>
         )
       })}
