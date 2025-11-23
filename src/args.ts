@@ -53,7 +53,25 @@ export const getYargs = async () => {
           type: 'string',
         })
     })
-    .demandCommand(1, 'Please specify a command: configure or review')
+    .command('stack', 'Launch interactive commit restructuring UI', (yargs) => {
+      return yargs
+        .option('port', {
+          description: 'Port to run the web server on',
+          type: 'number',
+          default: 3000,
+        })
+        .option('commits', {
+          description: 'Number of recent commits to include',
+          type: 'number',
+          default: 5,
+        })
+        .option('open', {
+          description: 'Automatically open browser',
+          type: 'boolean',
+          default: true,
+        })
+    })
+    .demandCommand(1, 'Please specify a command: configure, review, or stack')
     .option('debug', {
       description: 'Enables debug logging.',
       type: 'boolean',

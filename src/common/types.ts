@@ -42,4 +42,52 @@ export type ReviewArgs = BaseArgs & {
   customInstructions?: string
 }
 
-export type ParsedArgs = ConfigureArgs | ReviewArgs
+// Arguments for the stack command
+export type StackArgs = BaseArgs & {
+  port: number
+  commits: number
+  open: boolean
+}
+
+export type ParsedArgs = ConfigureArgs | ReviewArgs | StackArgs
+
+// Git types for commit restructuring (stack command)
+export type CommitInfo = {
+  hash: string
+  shortHash: string
+  author: string
+  date: string
+  message: string
+  filesChanged: string[]
+}
+
+export type Hunk = {
+  id: string // unique ID for UI tracking
+  fileId: string
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  content: string // the actual diff content
+  header: string // @@ ... @@ line
+}
+
+export type FileChange = {
+  id: string
+  fileName: string
+  changeType: 'added' | 'modified' | 'deleted' | 'renamed'
+  hunks: Hunk[]
+  oldPath?: string // for renames
+}
+
+export type StackCommit = {
+  commit: CommitInfo
+  changes: FileChange[]
+  selected: boolean // for UI selection
+}
+
+export type RestackOperation = {
+  targetCommitIndex: number // which commit (new or existing)
+  hunkId: string
+  fileId: string
+}
