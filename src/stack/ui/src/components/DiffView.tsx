@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useStyletron } from 'baseui'
-import { ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronRight, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import type { StackCommit } from '../types'
 
 type DiffViewProps = {
@@ -8,6 +8,8 @@ type DiffViewProps = {
   selectedFile: string | null
   onExpandSidebar: () => void
   sidebarCollapsed: boolean
+  expandedFile: string | null
+  onToggleExpand: (file: string | null) => void
 }
 
 export const DiffView = ({
@@ -15,9 +17,34 @@ export const DiffView = ({
   selectedFile,
   onExpandSidebar,
   sidebarCollapsed,
+  expandedFile,
+  onToggleExpand,
 }: DiffViewProps) => {
   const [css] = useStyletron()
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set())
+
+  const toggleFileCollapse = useCallback((fileName: string) => {
+    setCollapsedFiles(prev => {
+      const next = new Set(prev)
+      if (next.has(fileName)) {
+        next.delete(fileName)
+      } else {
+        next.add(fileName)
+      }
+      return next
+    })
+  }, [])
+
+  const filesToShow = useMemo(() => {
+    if (!commit) return []
+    if (expandedFile) {
+      return commit.changes.filter(change => change.fileName === expandedFile)
+    }
+    if (selectedFile) {
+      return commit.changes.filter(change => change.fileName === selectedFile)
+    }
+    return commit.changes
+  }, [expandedFile, selectedFile, commit])
 
   if (!commit) {
     return (
@@ -32,22 +59,6 @@ export const DiffView = ({
       </div>
     )
   }
-
-  const toggleFileCollapse = (fileName: string) => {
-    setCollapsedFiles(prev => {
-      const next = new Set(prev)
-      if (next.has(fileName)) {
-        next.delete(fileName)
-      } else {
-        next.add(fileName)
-      }
-      return next
-    })
-  }
-
-  const filesToShow = selectedFile
-    ? commit.changes.filter(change => change.fileName === selectedFile)
-    : commit.changes
 
   return (
     <div className={css({
@@ -102,30 +113,31 @@ export const DiffView = ({
               })}
             >
               {/* File Header */}
-              <button
-                onClick={() => toggleFileCollapse(fileChange.fileName)}
-                className={css({
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px',
-                  backgroundColor: '#27272a',
-                  border: 'none',
-                  color: '#fafafa',
-                  fontSize: '13px',
-                  fontFamily: 'inherit',
-                  cursor: 'pointer',
-                  ':hover': {
-                    backgroundColor: '#3f3f46',
-                  },
-                })}
-              >
-                <div className={css({
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                })}>
+              <div className={css({
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#27272a',
+                borderBottom: isCollapsed ? 'none' : '1px solid #3f3f46',
+              })}>
+                <button
+                  onClick={() => toggleFileCollapse(fileChange.fileName)}
+                  className={css({
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: '#fafafa',
+                    fontSize: '13px',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    gap: '8px',
+                    ':hover': {
+                      backgroundColor: '#3f3f46',
+                    },
+                  })}
+                >
                   {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                   <span className={css({ fontWeight: 600 })}>{fileChange.fileName}</span>
                   <span className={css({
@@ -135,15 +147,77 @@ export const DiffView = ({
                   })}>
                     {fileChange.changeType}
                   </span>
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={() => onToggleExpand(expandedFile === fileChange.fileName ? null : fileChange.fileName)}
+                  className={css({
+                    padding: '12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: expandedFile === fileChange.fileName ? '#a78bfa' : '#71717a',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    ':hover': {
+                      backgroundColor: '#3f3f46',
+                      color: '#a78bfa',
+                    },
+                  })}
+                  title={expandedFile === fileChange.fileName ? 'Exit fullscreen' : 'View file in fullscreen'}
+                >
+                  {expandedFile === fileChange.fileName ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+              </div>
 
               {/* Diff Content */}
               {!isCollapsed && (
                 <div className={css({
                   padding: '16px',
                 })}>
-                  {fileChange.hunks.map((hunk) => (
+                  {expandedFile === fileChange.fileName && fileChange.fullContent ? (
+                    <div className={css({
+                      backgroundColor: '#18181b',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      border: '1px solid #3f3f46',
+                    })}>
+                      <div className={css({
+                        display: 'grid',
+                        gridTemplateColumns: 'auto 1fr',
+                        fontSize: '12px',
+                        fontFamily: 'monospace',
+                      })}>
+                        {/* Line numbers */}
+                        <div className={css({
+                          backgroundColor: '#27272a',
+                          borderRight: '1px solid #3f3f46',
+                          padding: '12px 16px 12px 12px',
+                          textAlign: 'right',
+                          color: '#52525b',
+                          userSelect: 'none',
+                          lineHeight: '1.5',
+                        })}>
+                          {fileChange.fullContent.split('\n').map((_, i) => (
+                            <div key={i}>{i + 1}</div>
+                          ))}
+                        </div>
+                        {/* Code content */}
+                        <pre className={css({
+                          margin: 0,
+                          padding: '12px',
+                          fontSize: '12px',
+                          fontFamily: 'monospace',
+                          color: '#fafafa',
+                          overflowX: 'auto',
+                          whiteSpace: 'pre',
+                          lineHeight: '1.5',
+                        })}>
+                          <code>{fileChange.fullContent}</code>
+                        </pre>
+                      </div>
+                    </div>
+                  ) :
+                    fileChange.hunks.map((hunk) => (
                     <div
                       key={hunk.id}
                       className={css({
@@ -175,6 +249,9 @@ export const DiffView = ({
                           backgroundColor: '#18181b',
                         })}>
                           {hunk.content.split('\n').map((line, i) => {
+                            if (line.startsWith('@@')) {
+                              return null
+                            }
                             if (line.startsWith('-')) {
                               return (
                                 <div
@@ -183,18 +260,22 @@ export const DiffView = ({
                                     backgroundColor: '#450a0a',
                                     padding: '2px 8px',
                                     color: '#fca5a5',
+                                    overflowWrap: 'break-word',
+                                    wordBreak: 'break-all',
                                   })}
                                 >
                                   {line}
                                 </div>
                               )
-                            } else if (line.startsWith(' ') || line.startsWith('@@')) {
+                            } else if (line.startsWith(' ')) {
                               return (
                                 <div
                                   key={i}
                                   className={css({
                                     padding: '2px 8px',
                                     color: '#71717a',
+                                    overflowWrap: 'break-word',
+                                    wordBreak: 'break-all',
                                   })}
                                 >
                                   {line}
@@ -210,6 +291,9 @@ export const DiffView = ({
                           backgroundColor: '#18181b',
                         })}>
                           {hunk.content.split('\n').map((line, i) => {
+                            if (line.startsWith('@@')) {
+                              return null
+                            }
                             if (line.startsWith('+')) {
                               return (
                                 <div
@@ -218,18 +302,22 @@ export const DiffView = ({
                                     backgroundColor: '#052e16',
                                     padding: '2px 8px',
                                     color: '#86efac',
+                                    overflowWrap: 'break-word',
+                                    wordBreak: 'break-all',
                                   })}
                                 >
                                   {line}
                                 </div>
                               )
-                            } else if (line.startsWith(' ') || line.startsWith('@@')) {
+                            } else if (line.startsWith(' ')) {
                               return (
                                 <div
                                   key={i}
                                   className={css({
                                     padding: '2px 8px',
                                     color: '#71717a',
+                                    overflowWrap: 'break-word',
+                                    wordBreak: 'break-all',
                                   })}
                                 >
                                   {line}

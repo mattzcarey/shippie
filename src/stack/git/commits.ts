@@ -125,7 +125,25 @@ const getCommitDiff = async (
       { cwd: gitRoot, maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
     )
 
-    return parseDiff(diffOutput)
+    const changes = parseDiff(diffOutput)
+
+    // Fetch full content for each file (after the commit's changes)
+    for (const change of changes) {
+      if (change.changeType !== 'deleted') {
+        try {
+          // Get the file content as it exists after this commit
+          const { stdout: fullContent } = await execAsync(
+            `git show ${commitHash}:"${change.fileName}"`,
+            { cwd: gitRoot, maxBuffer: 10 * 1024 * 1024 }
+          )
+          change.fullContent = fullContent
+        } catch (error) {
+          logger.warn(`Failed to get full content for ${change.fileName}:`, error)
+        }
+      }
+    }
+
+    return changes
   } catch (error) {
     logger.error(`Failed to get diff for ${commitHash}:`, error)
     return []
@@ -135,7 +153,7 @@ const getCommitDiff = async (
 /**
  * Parses a unified diff into structured FileChange objects
  */
-const parseDiff = (diffOutput: string): FileChange[] => {
+const parseDiff = (diffOutput: string, gitRoot?: string, commitHash?: string): FileChange[] => {
   const files: FileChange[] = []
   const lines = diffOutput.split('\n')
 

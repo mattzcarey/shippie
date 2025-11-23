@@ -26,6 +26,7 @@ export type FileChange = {
   changeType: 'added' | 'modified' | 'deleted' | 'renamed'
   hunks: Hunk[]
   oldPath?: string
+  fullContent?: string
 }
 
 export type StackCommit = {

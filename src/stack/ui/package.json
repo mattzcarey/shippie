@@ -19,6 +19,7 @@
     "@tanstack/react-query-persist-client": "^5.90.12",
     "baseui": "^15.0.0",
     "lucide-react": "^0.554.0",
+    "nuqs": "^2.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "styletron-engine-atomic": "^1.6.2",

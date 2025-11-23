@@ -78,6 +78,7 @@ export type FileChange = {
   changeType: 'added' | 'modified' | 'deleted' | 'renamed'
   hunks: Hunk[]
   oldPath?: string // for renames
+  fullContent?: string // full file content after changes (for expanded view)
 }
 
 export type StackCommit = {

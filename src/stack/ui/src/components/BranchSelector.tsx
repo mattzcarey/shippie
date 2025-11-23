@@ -43,6 +43,19 @@ export const BranchSelector = ({ currentBranch, baseBranch, onCurrentBranchChang
       borderBottom: '1px solid #27272a',
       backgroundColor: '#18181b',
     })}>
+      {/* Shippie branding */}
+      <div className={css({
+        fontFamily: '"Courier New", Courier, monospace',
+        fontSize: '18px',
+        fontWeight: 'bold',
+        color: '#10b981',
+        letterSpacing: '2px',
+        textTransform: 'uppercase',
+        marginRight: '24px',
+      })}>
+        shippie
+      </div>
+
       {/* Base branch dropdown */}
       <div ref={baseDropdownRef} className={css({
         display: 'flex',

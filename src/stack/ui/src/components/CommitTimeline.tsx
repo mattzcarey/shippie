@@ -44,9 +44,8 @@ export const CommitTimeline = ({
         flex: 1,
         overflowY: 'auto',
       })}>
-        {commits.map((commit, index) => {
+        {commits.map((commit) => {
           const isSelected = selectedCommit === commit.commit.hash
-          const isFirst = index === 0
 
           return (
             <div key={commit.commit.hash}>
@@ -66,17 +65,6 @@ export const CommitTimeline = ({
                   },
                 })}
               >
-                {/* Vertical line */}
-                {index < commits.length - 1 && (
-                  <div className={css({
-                    position: 'absolute',
-                    left: '20px',
-                    top: '32px',
-                    bottom: '-12px',
-                    width: '2px',
-                    backgroundColor: '#3f3f46',
-                  })} />
-                )}
 
                 <div className={css({
                   display: 'flex',

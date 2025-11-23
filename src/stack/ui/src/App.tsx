@@ -1,10 +1,11 @@
-import { useState } from 'react'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { Client as Styletron } from 'styletron-engine-atomic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, DarkTheme } from 'baseui'
+import { NuqsAdapter } from 'nuqs/adapters/react'
+import { useQueryState, parseAsString, parseAsBoolean } from 'nuqs'
 import { useCommits } from './hooks/useCommits'
 import { useBranchInfo } from './hooks/useBranchInfo'
 import { FileTreeSidebar } from './components/FileTreeSidebar'
@@ -43,9 +44,12 @@ function AppContent() {
     baseBranch,
     currentBranch
   )
-  const [selectedCommit, setSelectedCommit] = useState<string | null>(null)
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false)
+
+  // URL state management with nuqs
+  const [selectedCommit, setSelectedCommit] = useQueryState('commit', parseAsString)
+  const [selectedFile, setSelectedFile] = useQueryState('file', parseAsString)
+  const [expandedFile, setExpandedFile] = useQueryState('expanded', parseAsString)
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useQueryState('leftCollapsed', parseAsBoolean.withDefault(false))
 
   if (commitsLoading) {
     return (
@@ -102,6 +106,7 @@ function AppContent() {
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
             onCollapse={() => setLeftSidebarCollapsed(true)}
+            expandedFile={expandedFile}
           />
         )}
 
@@ -111,6 +116,8 @@ function AppContent() {
           selectedFile={selectedFile}
           onExpandSidebar={() => setLeftSidebarCollapsed(false)}
           sidebarCollapsed={leftSidebarCollapsed}
+          expandedFile={expandedFile}
+          onToggleExpand={setExpandedFile}
         />
 
         {/* Right Sidebar - Commit Timeline */}
@@ -126,18 +133,20 @@ function AppContent() {
 
 function App() {
   return (
-    <StyletronProvider value={engine}>
-      <BaseProvider theme={DarkTheme}>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister }}
-        >
-          <BranchProvider>
-            <AppContent />
-          </BranchProvider>
-        </PersistQueryClientProvider>
-      </BaseProvider>
-    </StyletronProvider>
+    <NuqsAdapter>
+      <StyletronProvider value={engine}>
+        <BaseProvider theme={DarkTheme}>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{ persister }}
+          >
+            <BranchProvider>
+              <AppContent />
+            </BranchProvider>
+          </PersistQueryClientProvider>
+        </BaseProvider>
+      </StyletronProvider>
+    </NuqsAdapter>
   )
 }
 
