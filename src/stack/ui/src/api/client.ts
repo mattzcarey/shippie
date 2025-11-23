@@ -1,12 +1,37 @@
 import type { StackCommit, RestackOperation } from '../types'
 
-const API_BASE_URL = 'http://localhost:3000'
+// Use the current origin (window.location.origin) so it works on any port
+const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
 
 export const api = {
-  async getCommits(): Promise<StackCommit[]> {
-    const response = await fetch(`${API_BASE_URL}/api/commits`)
+  async getCommits(baseBranch?: string, currentBranch?: string): Promise<StackCommit[]> {
+    const params = new URLSearchParams()
+    if (baseBranch) params.append('base', baseBranch)
+    if (currentBranch) params.append('branch', currentBranch)
+
+    const url = params.toString()
+      ? `${API_BASE_URL}/api/commits?${params.toString()}`
+      : `${API_BASE_URL}/api/commits`
+
+    const response = await fetch(url)
     if (!response.ok) {
       throw new Error('Failed to fetch commits')
+    }
+    return response.json()
+  },
+
+  async getBranchInfo(): Promise<{ currentBranch: string; baseBranch: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/branch`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch branch info')
+    }
+    return response.json()
+  },
+
+  async getBranches(): Promise<{ local: string[]; remote: string[]; all: string[] }> {
+    const response = await fetch(`${API_BASE_URL}/api/branches`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch branches')
     }
     return response.json()
   },

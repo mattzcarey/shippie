@@ -6,19 +6,64 @@ import { logger } from '../../common/utils/logger'
 const execAsync = promisify(exec)
 
 /**
+ * Gets the current branch name
+ */
+const getCurrentBranch = async (gitRoot: string): Promise<string> => {
+  try {
+    const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', {
+      cwd: gitRoot,
+    })
+    return stdout.trim()
+  } catch (error) {
+    logger.error('Failed to get current branch:', error)
+    return 'HEAD'
+  }
+}
+
+/**
+ * Determines the base branch to compare against
+ */
+const getBaseBranch = async (gitRoot: string): Promise<string> => {
+  // Try origin/main first, then origin/master, then main, then master
+  const branches = ['origin/main', 'origin/master', 'main', 'master']
+
+  for (const branch of branches) {
+    try {
+      await execAsync(`git rev-parse --verify ${branch}`, { cwd: gitRoot })
+      return branch
+    } catch {
+      // Branch doesn't exist, try next
+    }
+  }
+
+  return 'main' // fallback
+}
+
+/**
  * Fetches the commit history with full diff information
+ * Only returns commits that are ahead of the base branch (like a PR)
  */
 export const getCommitHistory = async (
   gitRoot: string,
-  numCommits: number
+  numCommits: number,
+  customBaseBranch?: string,
+  customCurrentBranch?: string
 ): Promise<StackCommit[]> => {
   try {
-    // Get commit list with format: hash|author|date|message
-    const logCommand = `git log -n ${numCommits} --pretty=format:"%H|%an|%ad|%s" --date=short`
+    // Get current branch and base branch
+    const currentBranch = customCurrentBranch || (await getCurrentBranch(gitRoot))
+    const baseBranch = customBaseBranch || (await getBaseBranch(gitRoot))
+
+    logger.info(`Branch comparison - custom current: ${customCurrentBranch}, custom base: ${customBaseBranch}`)
+    logger.info(`Branch comparison - resolved current: ${currentBranch}, resolved base: ${baseBranch}`)
+
+    // Get commits between base and current (commits ahead of base)
+    // Use the range syntax: base..branch to get commits in branch but not in base
+    const logCommand = `git log ${baseBranch}..${currentBranch} --pretty=format:"%H|%an|%ad|%s" --date=short`
     const { stdout: logOutput } = await execAsync(logCommand, { cwd: gitRoot })
 
     if (!logOutput.trim()) {
-      logger.warn('No commits found')
+      logger.warn('No commits ahead of base branch')
       return []
     }
 

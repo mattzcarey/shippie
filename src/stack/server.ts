@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
+import { execSync } from 'node:child_process'
 import { logger } from '../common/utils/logger'
 import { getCommitHistory } from './git/commits'
 import { applyRestack } from './git/apply'
@@ -23,11 +24,77 @@ export const createStackServer = async (config: ServerConfig) => {
     return c.json({ status: 'ok', gitRoot: config.gitRoot })
   })
 
+  // Get all branches
+  app.get('/api/branches', (c) => {
+    try {
+      // Get all local branches
+      const localBranches = execSync('git branch --format="%(refname:short)"', {
+        cwd: config.gitRoot,
+        encoding: 'utf-8',
+      })
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+
+      // Get all remote branches
+      const remoteBranches = execSync('git branch -r --format="%(refname:short)"', {
+        cwd: config.gitRoot,
+        encoding: 'utf-8',
+      })
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .filter(b => !b.includes('HEAD') && b.includes('/')) // Filter out HEAD and non-branch entries
+
+      return c.json({
+        local: localBranches,
+        remote: remoteBranches,
+        all: [...localBranches, ...remoteBranches]
+      })
+    } catch (error) {
+      logger.error('Failed to get branches:', error)
+      return c.json({ local: [], remote: [], all: [] }, 500)
+    }
+  })
+
+  // Get branch info
+  app.get('/api/branch', (c) => {
+    try {
+      const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
+        cwd: config.gitRoot,
+        encoding: 'utf-8',
+      }).trim()
+
+      // Try to find base branch
+      const branches = ['origin/main', 'origin/master', 'main', 'master']
+      let baseBranch = 'main'
+      for (const branch of branches) {
+        try {
+          execSync(`git rev-parse --verify ${branch}`, {
+            cwd: config.gitRoot,
+            stdio: 'ignore',
+          })
+          baseBranch = branch
+          break
+        } catch {
+          // Branch doesn't exist
+        }
+      }
+
+      return c.json({ currentBranch, baseBranch })
+    } catch (error) {
+      logger.error('Failed to get branch info:', error)
+      return c.json({ currentBranch: 'unknown', baseBranch: 'main' })
+    }
+  })
+
   // Get commit history with diffs
   app.get('/api/commits', async (c) => {
     try {
-      logger.debug('Fetching commit history...')
-      const commits = await getCommitHistory(config.gitRoot, config.numCommits)
+      const baseBranch = c.req.query('base') // Optional base branch parameter
+      const currentBranch = c.req.query('branch') // Optional current branch parameter
+      logger.debug(`Fetching commit history: ${baseBranch || 'auto'} .. ${currentBranch || 'HEAD'}`)
+      const commits = await getCommitHistory(config.gitRoot, config.numCommits, baseBranch, currentBranch)
       logger.debug(`Fetched ${commits.length} commits`)
       return c.json(commits)
     } catch (error) {

@@ -1,42 +1,64 @@
 import { useState } from 'react'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
+import { Client as Styletron } from 'styletron-engine-atomic'
+import { Provider as StyletronProvider } from 'styletron-react'
+import { BaseProvider, DarkTheme } from 'baseui'
 import { useCommits } from './hooks/useCommits'
-import { useRestack } from './hooks/useRestack'
-import { CommitList } from './components/CommitList'
-import { FileView } from './components/FileView'
-import { RestackPanel } from './components/RestackPanel'
-import { GitBranch, Loader2 } from 'lucide-react'
+import { useBranchInfo } from './hooks/useBranchInfo'
+import { FileTreeSidebar } from './components/FileTreeSidebar'
+import { DiffView } from './components/DiffView'
+import { CommitTimeline } from './components/CommitTimeline'
+import { BranchSelector } from './components/BranchSelector'
+import { BranchProvider, useBranchContext } from './contexts/BranchContext'
+import { Loader2 } from 'lucide-react'
 
-function App() {
-  const { commits, loading, error: commitsError, toggleCommitSelection } = useCommits()
-  const {
-    operations,
-    applying,
-    error: restackError,
-    addOperation,
-    removeOperation,
-    clearOperations,
-    applyRestack,
-  } = useRestack()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      gcTime: 1000 * 60 * 60, // 1 hour - must match or exceed persister maxAge
+      staleTime: 1000 * 60 * 10, // Consider data fresh for 10 minutes
+    },
+  },
+})
 
-  const [selectedCommits, setSelectedCommits] = useState<string[]>([])
+const persister = createAsyncStoragePersister({
+  storage: window.localStorage,
+  key: 'STACK_QUERY_CACHE',
+})
 
-  const handleToggleCommit = (hash: string) => {
-    toggleCommitSelection(hash)
-    setSelectedCommits((prev) =>
-      prev.includes(hash) ? prev.filter((h) => h !== hash) : [...prev, hash]
-    )
-  }
+const engine = new Styletron()
 
-  const selectedCommitData = commits.filter((c) =>
-    selectedCommits.includes(c.commit.hash)
+function AppContent() {
+  const { data: branchInfo } = useBranchInfo()
+  const { baseBranch: selectedBaseBranch, currentBranch: selectedCurrentBranch, setBaseBranch, setCurrentBranch } = useBranchContext()
+
+  const baseBranch = selectedBaseBranch || branchInfo?.baseBranch
+  const currentBranch = selectedCurrentBranch || branchInfo?.currentBranch
+
+  const { data: commits = [], isLoading: commitsLoading, error: commitsError } = useCommits(
+    baseBranch,
+    currentBranch
   )
+  const [selectedCommit, setSelectedCommit] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false)
 
-  if (loading) {
+  if (commitsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">Loading commits...</p>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#09090b'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 style={{ width: 32, height: 32, margin: '0 auto 16px', color: '#10b981' }} />
+          <p style={{ color: '#a1a1aa', fontSize: 14 }}>Loading repository...</p>
         </div>
       </div>
     )
@@ -44,59 +66,78 @@ function App() {
 
   if (commitsError) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center max-w-md">
-          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
-            <h2 className="text-red-700 text-xl font-semibold mb-2">Error</h2>
-            <p className="text-red-600">{commitsError}</p>
-          </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#09090b'
+      }}>
+        <div style={{ maxWidth: 400, padding: 24, backgroundColor: '#450a0a', border: '1px solid #991b1b' }}>
+          <h2 style={{ color: '#f87171', fontSize: 14, marginBottom: 8 }}>ERROR</h2>
+          <p style={{ color: '#fca5a5', fontSize: 12 }}>{String(commitsError)}</p>
         </div>
       </div>
     )
   }
 
+  const currentCommit = commits.find(c => c.commit.hash === selectedCommit) || commits[0]
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <GitBranch className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-800">Shippie Stack</h1>
-        </div>
-        <div className="text-sm text-gray-500">
-          {commits.length} commits • {selectedCommits.length} selected
-        </div>
-      </header>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#09090b', color: '#fafafa' }}>
+      {/* Top Bar - Branch Selector */}
+      <BranchSelector
+        currentBranch={currentBranch || 'main'}
+        baseBranch={baseBranch || 'main'}
+        onCurrentBranchChange={setCurrentBranch}
+        onBaseBranchChange={setBaseBranch}
+      />
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel: Commit List */}
-        <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-          <CommitList
-            commits={commits}
-            selectedHashes={selectedCommits}
-            onToggle={handleToggleCommit}
+      {/* Main Content Area */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Left Sidebar - File Tree */}
+        {!leftSidebarCollapsed && (
+          <FileTreeSidebar
+            commit={currentCommit}
+            selectedFile={selectedFile}
+            onSelectFile={setSelectedFile}
+            onCollapse={() => setLeftSidebarCollapsed(true)}
           />
-        </aside>
+        )}
 
-        {/* Center Panel: File Diffs */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          <FileView commits={selectedCommitData} onHunkSelect={addOperation} />
-        </main>
+        {/* Center - Diff View */}
+        <DiffView
+          commit={currentCommit}
+          selectedFile={selectedFile}
+          onExpandSidebar={() => setLeftSidebarCollapsed(false)}
+          sidebarCollapsed={leftSidebarCollapsed}
+        />
 
-        {/* Right Panel: Restack Preview */}
-        <aside className="w-96 bg-white border-l border-gray-200 overflow-y-auto">
-          <RestackPanel
-            operations={operations}
-            applying={applying}
-            error={restackError}
-            onRemove={removeOperation}
-            onClear={clearOperations}
-            onApply={applyRestack}
-          />
-        </aside>
+        {/* Right Sidebar - Commit Timeline */}
+        <CommitTimeline
+          commits={commits}
+          selectedCommit={selectedCommit}
+          onSelectCommit={setSelectedCommit}
+        />
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={DarkTheme}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister }}
+        >
+          <BranchProvider>
+            <AppContent />
+          </BranchProvider>
+        </PersistQueryClientProvider>
+      </BaseProvider>
+    </StyletronProvider>
   )
 }
 

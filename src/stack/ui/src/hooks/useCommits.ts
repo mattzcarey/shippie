@@ -1,38 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { StackCommit } from '../types'
 import { api } from '../api/client'
 
-export const useCommits = () => {
-  const [commits, setCommits] = useState<StackCommit[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchCommits = async () => {
-      try {
-        setLoading(true)
-        const data = await api.getCommits()
-        setCommits(data)
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch commits')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCommits()
-  }, [])
-
-  const toggleCommitSelection = (hash: string) => {
-    setCommits((prev) =>
-      prev.map((commit) =>
-        commit.commit.hash === hash
-          ? { ...commit, selected: !commit.selected }
-          : commit
-      )
-    )
-  }
-
-  return { commits, loading, error, toggleCommitSelection }
+export const useCommits = (baseBranch?: string, currentBranch?: string) => {
+  return useQuery<StackCommit[], Error>({
+    queryKey: ['commits', { base: baseBranch || 'default', current: currentBranch || 'default' }],
+    queryFn: () => api.getCommits(baseBranch, currentBranch),
+    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+    staleTime: 1000 * 60 * 10, // Consider data fresh for 10 minutes (diffs don't change often)
+  })
 }
