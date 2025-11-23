@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useStyletron } from 'baseui'
-import { ChevronRight, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, Maximize2, Minimize2, Loader2 } from 'lucide-react'
 import type { StackCommit } from '../types'
+import { UnifiedFileView } from './UnifiedFileView'
+import { useFileContent } from '../hooks/useFileContent'
 
 type DiffViewProps = {
   commit: StackCommit | undefined
@@ -22,6 +24,13 @@ export const DiffView = ({
 }: DiffViewProps) => {
   const [css] = useStyletron()
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set())
+
+  // Fetch full file content when a file is expanded
+  const { data: fileContent, isLoading: fileContentLoading, error: fileContentError } = useFileContent({
+    commitHash: commit?.commit.hash,
+    filePath: expandedFile || undefined,
+    enabled: !!expandedFile && !!commit,
+  })
 
   const toggleFileCollapse = useCallback((fileName: string) => {
     setCollapsedFiles(prev => {
@@ -174,49 +183,46 @@ export const DiffView = ({
                 <div className={css({
                   padding: '16px',
                 })}>
-                  {expandedFile === fileChange.fileName && fileChange.fullContent ? (
-                    <div className={css({
-                      backgroundColor: '#18181b',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      border: '1px solid #3f3f46',
-                    })}>
+                  {expandedFile === fileChange.fileName ? (
+                    fileContentLoading ? (
                       <div className={css({
-                        display: 'grid',
-                        gridTemplateColumns: 'auto 1fr',
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
+                        padding: '48px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '16px',
+                        color: '#71717a',
                       })}>
-                        {/* Line numbers */}
-                        <div className={css({
-                          backgroundColor: '#27272a',
-                          borderRight: '1px solid #3f3f46',
-                          padding: '12px 16px 12px 12px',
-                          textAlign: 'right',
-                          color: '#52525b',
-                          userSelect: 'none',
-                          lineHeight: '1.5',
-                        })}>
-                          {fileChange.fullContent.split('\n').map((_, i) => (
-                            <div key={i}>{i + 1}</div>
-                          ))}
-                        </div>
-                        {/* Code content */}
-                        <pre className={css({
-                          margin: 0,
-                          padding: '12px',
-                          fontSize: '12px',
-                          fontFamily: 'monospace',
-                          color: '#fafafa',
-                          overflowX: 'auto',
-                          whiteSpace: 'pre',
-                          lineHeight: '1.5',
-                        })}>
-                          <code>{fileChange.fullContent}</code>
-                        </pre>
+                        <Loader2 className={css({ animation: 'spin 1s linear infinite' })} size={32} />
+                        <span>Loading file content...</span>
                       </div>
-                    </div>
-                  ) :
+                    ) : fileContentError ? (
+                      <div className={css({
+                        padding: '24px',
+                        textAlign: 'center',
+                        color: '#f87171',
+                        backgroundColor: '#450a0a',
+                        border: '1px solid #991b1b',
+                      })}>
+                        Failed to load file content: {String(fileContentError)}
+                      </div>
+                    ) : fileContent ? (
+                      <UnifiedFileView
+                        fileName={fileChange.fileName}
+                        fileContent={fileContent}
+                        hunks={fileChange.hunks}
+                      />
+                    ) : (
+                      <div className={css({
+                        padding: '24px',
+                        textAlign: 'center',
+                        color: '#71717a',
+                      })}>
+                        Full file content not available
+                      </div>
+                    )
+                  ) : (
                     fileChange.hunks.map((hunk) => (
                     <div
                       key={hunk.id}
@@ -329,7 +335,8 @@ export const DiffView = ({
                         </div>
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               )}
             </div>

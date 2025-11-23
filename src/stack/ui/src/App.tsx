@@ -107,6 +107,7 @@ function AppContent() {
             onSelectFile={setSelectedFile}
             onCollapse={() => setLeftSidebarCollapsed(true)}
             expandedFile={expandedFile}
+            onToggleExpand={setExpandedFile}
           />
         )}
 

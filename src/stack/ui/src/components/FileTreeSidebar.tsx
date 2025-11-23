@@ -9,6 +9,7 @@ type FileTreeSidebarProps = {
   onSelectFile: (file: string) => void
   onCollapse: () => void
   expandedFile: string | null
+  onToggleExpand: (file: string | null) => void
 }
 
 type FileTreeNode = {
@@ -60,6 +61,7 @@ export const FileTreeSidebar = ({
   onSelectFile,
   onCollapse,
   expandedFile,
+  onToggleExpand,
 }: FileTreeSidebarProps) => {
   const [css] = useStyletron()
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
@@ -143,10 +145,22 @@ export const FileTreeSidebar = ({
       )
     }
 
+    const handleFileClick = () => {
+      // If clicking the same file that's already expanded, collapse it
+      if (expandedFile === node.path) {
+        onToggleExpand(null)
+        onSelectFile(node.path)
+      } else {
+        // Otherwise expand this file
+        onToggleExpand(node.path)
+        onSelectFile(node.path)
+      }
+    }
+
     return (
       <button
         key={node.path}
-        onClick={() => onSelectFile(node.path)}
+        onClick={handleFileClick}
         className={css({
           width: '100%',
           textAlign: 'left',
