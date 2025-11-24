@@ -5,12 +5,14 @@ import { BaseProvider, DarkTheme } from 'baseui'
 import { Loader2 } from 'lucide-react'
 import { parseAsArrayOf, parseAsBoolean, parseAsString, useQueryState } from 'nuqs'
 import { NuqsAdapter } from 'nuqs/adapters/react'
+import { useState } from 'react'
 import { Client as Styletron } from 'styletron-engine-atomic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BranchSelector } from './components/BranchSelector'
 import { CodeView } from './components/CodeView'
 import { CommitTimeline } from './components/CommitTimeline'
 import { FileTreeSidebar } from './components/FileTreeSidebar'
+import { RestackPanel } from './components/RestackPanel'
 import { BranchProvider, useBranchContext } from './contexts/BranchContext'
 import { useBranchInfo } from './hooks/useBranchInfo'
 import { useCommits } from './hooks/useCommits'
@@ -71,6 +73,30 @@ function AppContent() {
     'search',
     parseAsString.withDefault('')
   )
+
+  // Restack mode state
+  const [editMode, setEditMode] = useState(false)
+  const [selectedCommitsForRestack, setSelectedCommitsForRestack] = useState<Set<string>>(
+    new Set()
+  )
+
+  const handleToggleEditMode = () => {
+    setEditMode(!editMode)
+    // Clear selections when exiting edit mode
+    if (editMode) {
+      setSelectedCommitsForRestack(new Set())
+    }
+  }
+
+  const handleToggleCommitForRestack = (hash: string) => {
+    const newSelection = new Set(selectedCommitsForRestack)
+    if (newSelection.has(hash)) {
+      newSelection.delete(hash)
+    } else {
+      newSelection.add(hash)
+    }
+    setSelectedCommitsForRestack(newSelection)
+  }
 
   if (commitsLoading) {
     return (
@@ -171,30 +197,43 @@ function AppContent() {
           />
         )}
 
-        {/* Center - Code View */}
-        <CodeView
-          commit={currentCommit}
-          selectedFile={selectedFile}
-          onExpandSidebar={() => setLeftSidebarCollapsed(false)}
-          sidebarCollapsed={leftSidebarCollapsed}
-          expandedFile={expandedFile}
-          onToggleExpand={setExpandedFile}
-          collapsedFiles={collapsedFiles}
-          onToggleFileCollapse={(file) => {
-            const index = collapsedFiles.indexOf(file)
-            if (index >= 0) {
-              setCollapsedFiles(collapsedFiles.filter((_, i) => i !== index))
-            } else {
-              setCollapsedFiles([...collapsedFiles, file])
-            }
-          }}
-        />
+        {/* Center - Code View or Restack Panel */}
+        {editMode && selectedCommitsForRestack.size > 0 ? (
+          <RestackPanel
+            selectedCommits={commits.filter((c) =>
+              selectedCommitsForRestack.has(c.commit.hash)
+            )}
+            onExit={handleToggleEditMode}
+          />
+        ) : (
+          <CodeView
+            commit={currentCommit}
+            selectedFile={selectedFile}
+            onExpandSidebar={() => setLeftSidebarCollapsed(false)}
+            sidebarCollapsed={leftSidebarCollapsed}
+            expandedFile={expandedFile}
+            onToggleExpand={setExpandedFile}
+            collapsedFiles={collapsedFiles}
+            onToggleFileCollapse={(file) => {
+              const index = collapsedFiles.indexOf(file)
+              if (index >= 0) {
+                setCollapsedFiles(collapsedFiles.filter((_, i) => i !== index))
+              } else {
+                setCollapsedFiles([...collapsedFiles, file])
+              }
+            }}
+          />
+        )}
 
         {/* Right Sidebar - Commit Timeline */}
         <CommitTimeline
           commits={commits}
           selectedCommit={selectedCommit}
           onSelectCommit={setSelectedCommit}
+          editMode={editMode}
+          onToggleEditMode={handleToggleEditMode}
+          selectedCommitsForRestack={selectedCommitsForRestack}
+          onToggleCommitForRestack={handleToggleCommitForRestack}
         />
       </div>
     </div>

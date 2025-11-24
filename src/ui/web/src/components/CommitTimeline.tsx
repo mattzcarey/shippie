@@ -1,17 +1,25 @@
 import { useStyletron } from 'baseui'
-import { GitCommit } from 'lucide-react'
+import { GitCommit, Edit3, X } from 'lucide-react'
 import type { StackCommit } from '../types'
 
 type CommitTimelineProps = {
   commits: StackCommit[]
   selectedCommit: string | null
   onSelectCommit: (hash: string) => void
+  editMode?: boolean
+  onToggleEditMode?: () => void
+  selectedCommitsForRestack?: Set<string>
+  onToggleCommitForRestack?: (hash: string) => void
 }
 
 export const CommitTimeline = ({
   commits,
   selectedCommit,
   onSelectCommit,
+  editMode = false,
+  onToggleEditMode,
+  selectedCommitsForRestack = new Set(),
+  onToggleCommitForRestack,
 }: CommitTimelineProps) => {
   const [css] = useStyletron()
 
@@ -30,6 +38,9 @@ export const CommitTimeline = ({
         className={css({
           padding: '12px',
           borderBottom: '1px solid #27272a',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         })}
       >
         <span
@@ -41,8 +52,43 @@ export const CommitTimeline = ({
             letterSpacing: '0.5px',
           })}
         >
-          Commit Timeline
+          {editMode ? 'Restack Mode' : 'Commit Timeline'}
         </span>
+
+        {onToggleEditMode && (
+          <button
+            type="button"
+            onClick={onToggleEditMode}
+            className={css({
+              padding: '4px 8px',
+              backgroundColor: editMode ? '#7c3aed' : '#27272a',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: '#fafafa',
+              fontSize: '11px',
+              fontWeight: 500,
+              ':hover': {
+                backgroundColor: editMode ? '#6d28d9' : '#3f3f46',
+              },
+            })}
+          >
+            {editMode ? (
+              <>
+                <X size={14} />
+                Exit
+              </>
+            ) : (
+              <>
+                <Edit3 size={14} />
+                Restack
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Commit List */}
@@ -54,23 +100,36 @@ export const CommitTimeline = ({
       >
         {commits.map((commit) => {
           const isSelected = selectedCommit === commit.commit.hash
+          const isSelectedForRestack = selectedCommitsForRestack.has(
+            commit.commit.hash
+          )
 
           return (
             <div key={commit.commit.hash}>
               <button
                 type="button"
-                onClick={() => onSelectCommit(commit.commit.hash)}
+                onClick={() => {
+                  if (editMode && onToggleCommitForRestack) {
+                    onToggleCommitForRestack(commit.commit.hash)
+                  } else {
+                    onSelectCommit(commit.commit.hash)
+                  }
+                }}
                 className={css({
                   width: '100%',
                   textAlign: 'left',
                   padding: '12px',
-                  backgroundColor: isSelected ? '#27272a' : 'transparent',
-                  border: 'none',
+                  backgroundColor: isSelectedForRestack
+                    ? '#7c3aed22'
+                    : isSelected
+                      ? '#27272a'
+                      : 'transparent',
+                  border: isSelectedForRestack ? '1px solid #7c3aed' : 'none',
                   cursor: 'pointer',
                   position: 'relative',
                   fontFamily: 'inherit',
                   ':hover': {
-                    backgroundColor: '#27272a',
+                    backgroundColor: editMode ? '#7c3aed11' : '#27272a',
                   },
                 })}
               >
@@ -90,7 +149,11 @@ export const CommitTimeline = ({
                     <GitCommit
                       size={16}
                       className={css({
-                        color: isSelected ? '#10b981' : '#71717a',
+                        color: isSelectedForRestack
+                          ? '#7c3aed'
+                          : isSelected
+                            ? '#10b981'
+                            : '#71717a',
                       })}
                     />
                   </div>

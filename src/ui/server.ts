@@ -7,8 +7,10 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import type { RestackRequest } from '../common/types'
 import { logger } from '../common/utils/logger'
 import { getCommitHistory } from './git/commits'
+import { applyRestack } from './git/restack'
 
 const execAsync = promisify(exec)
 
@@ -179,6 +181,37 @@ export const createStackServer = async (config: ServerConfig) => {
       logger.error('Failed to get file content:', error)
       const message =
         error instanceof Error ? error.message : 'Failed to fetch file content'
+      return c.json({ error: message }, 500)
+    }
+  })
+
+  // Apply restack operation
+  app.post('/api/restack', async (c) => {
+    try {
+      const request: RestackRequest = await c.req.json()
+      logger.info(`Received restack request with ${request.newCommits.length} commits`)
+
+      // Validate request
+      if (!request.newCommits || request.newCommits.length === 0) {
+        return c.json({ error: 'No commits provided' }, 400)
+      }
+
+      if (!request.allLines || request.allLines.length === 0) {
+        return c.json({ error: 'No lines provided' }, 400)
+      }
+
+      if (!request.baseBranch) {
+        return c.json({ error: 'Base branch not provided' }, 400)
+      }
+
+      // Apply the restack
+      await applyRestack(config.gitRoot, request)
+
+      logger.info('Restack operation completed successfully')
+      return c.json({ success: true })
+    } catch (error) {
+      logger.error('Failed to apply restack:', error)
+      const message = error instanceof Error ? error.message : 'Failed to apply restack'
       return c.json({ error: message }, 500)
     }
   })

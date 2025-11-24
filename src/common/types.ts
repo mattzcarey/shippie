@@ -92,3 +92,24 @@ export type RestackOperation = {
   hunkId: string
   fileId: string
 }
+
+// Types for the restack API
+export type RestackLine = {
+  id: string // unique ID: commitHash-fileId-hunkId-line-index
+  commitHash: string
+  fileName: string
+  content: string
+  lineType: 'add' | 'delete'
+}
+
+export type RestackCommit = {
+  message: string
+  lineIds: string[] // IDs of lines to include in this commit
+}
+
+export type RestackRequest = {
+  baseBranch: string
+  selectedCommitHashes: string[] // Original commits being restacked
+  newCommits: RestackCommit[]
+  allLines: RestackLine[] // All available lines from selected commits
+}
