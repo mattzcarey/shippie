@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useStyletron } from 'baseui'
 import { ChevronLeft, ChevronDown, ChevronRight, Folder, FileIcon, Search } from 'lucide-react'
 import type { StackCommit } from '../types'
@@ -10,6 +10,10 @@ type FileTreeSidebarProps = {
   onCollapse: () => void
   expandedFile: string | null
   onToggleExpand: (file: string | null) => void
+  collapsedFolders: string[]
+  onToggleFolder: (folder: string) => void
+  searchQuery: string
+  onSearchChange: (query: string) => void
 }
 
 type FileTreeNode = {
@@ -62,10 +66,12 @@ export const FileTreeSidebar = ({
   onCollapse,
   expandedFile,
   onToggleExpand,
+  collapsedFolders,
+  onToggleFolder,
+  searchQuery,
+  onSearchChange,
 }: FileTreeSidebarProps) => {
   const [css] = useStyletron()
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
-  const [searchQuery, setSearchQuery] = useState('')
 
   const files = useMemo(() => commit?.commit.filesChanged || [], [commit?.commit.filesChanged])
   const fileTree = useMemo(() => buildFileTree(files), [files])
@@ -75,21 +81,9 @@ export const FileTreeSidebar = ({
     return files.filter(file => file.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [files, searchQuery])
 
-  const toggleFolder = useCallback((path: string) => {
-    setCollapsedFolders(prev => {
-      const next = new Set(prev)
-      if (next.has(path)) {
-        next.delete(path)
-      } else {
-        next.add(path)
-      }
-      return next
-    })
-  }, [])
-
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value)
-  }, [])
+    onSearchChange(e.target.value)
+  }, [onSearchChange])
 
   if (!commit) {
     return null
@@ -102,7 +96,7 @@ export const FileTreeSidebar = ({
 
     const isExpanded = expandedFile === node.path
     const isSelected = selectedFile === node.path
-    const isCollapsed = collapsedFolders.has(node.path)
+    const isCollapsed = collapsedFolders.includes(node.path)
 
     if (node.isDirectory) {
       const hasVisibleChildren = searchQuery
@@ -116,7 +110,7 @@ export const FileTreeSidebar = ({
       return (
         <div key={node.path}>
           <button
-            onClick={() => toggleFolder(node.path)}
+            onClick={() => onToggleFolder(node.path)}
             className={css({
               width: '100%',
               textAlign: 'left',
@@ -145,22 +139,30 @@ export const FileTreeSidebar = ({
       )
     }
 
-    const handleFileClick = () => {
-      // If clicking the same file that's already expanded, collapse it
+    const handleSingleClick = () => {
+      // Single click: navigate to file, preserve expanded mode state
+      onSelectFile(node.path)
+      // If we're in expanded mode, update expanded file to the new file
+      if (expandedFile) {
+        onToggleExpand(node.path)
+      }
+    }
+
+    const handleDoubleClick = () => {
+      // Double click: toggle between patch mode and full mode
       if (expandedFile === node.path) {
         onToggleExpand(null)
-        onSelectFile(node.path)
       } else {
-        // Otherwise expand this file
         onToggleExpand(node.path)
-        onSelectFile(node.path)
       }
+      onSelectFile(node.path)
     }
 
     return (
       <button
         key={node.path}
-        onClick={handleFileClick}
+        onClick={handleSingleClick}
+        onDoubleClick={handleDoubleClick}
         className={css({
           width: '100%',
           textAlign: 'left',

@@ -24,9 +24,9 @@ const main = async () => {
         await review(argv as ReviewArgs)
         break
       }
-      case 'stack': {
-        const { stack } = await import('./stack')
-        await stack(argv as StackArgs)
+      case 'ui': {
+        const { ui } = await import('./ui')
+        await ui(argv as StackArgs)
         break
       }
       default:

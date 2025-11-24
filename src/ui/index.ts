@@ -4,11 +4,10 @@ import { logger } from '../common/utils/logger'
 import { getGitRoot } from '../common/git/getChangedFilesNames'
 import { createStackServer } from './server'
 
-export const stack = async (argv: StackArgs): Promise<void> => {
+export const ui = async (argv: StackArgs): Promise<void> => {
   try {
-    logger.info('Starting stack command...')
+    logger.info('Starting UI command...')
     logger.debug(`Port: ${argv.port}`)
-    logger.debug(`Number of commits: ${argv.commits}`)
     logger.debug(`Auto-open browser: ${argv.open}`)
 
     // Verify we're in a git repository
@@ -19,7 +18,6 @@ export const stack = async (argv: StackArgs): Promise<void> => {
     await createStackServer({
       port: argv.port,
       gitRoot,
-      numCommits: argv.commits,
     })
 
     const url = `http://localhost:${argv.port}`
@@ -36,7 +34,7 @@ export const stack = async (argv: StackArgs): Promise<void> => {
     // Keep the process alive
     await new Promise(() => {})
   } catch (error) {
-    logger.error('Failed to start stack command:', error)
+    logger.error('Failed to start UI command:', error)
     throw error
   }
 }

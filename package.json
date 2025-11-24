@@ -2,11 +2,18 @@
     "name": "shippie",
     "version": "0.20.0",
     "description": "an extensible code review agent",
+    "type": "module",
     "bin": {
         "shippie": "./dist/index.js"
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/mattzcarey/shippie"
@@ -17,8 +24,10 @@
         "configure": "bun run ./src/index.ts configure",
         "test:e2e": "bun test src/specs/scenarios.test.ts --concurrent",
         "test:unit": "bun test review configure common src/specs/runner src/specs/utils",
-        "build": "tsup",
-        "publish:build": "bun run build && bun publish --access public",
+        "build": "tsdown",
+        "build:ui": "cd src/ui/ui && bun install && bun run build",
+        "build:all": "bun run build:ui && bun run build",
+        "publish:build": "bun run build:all && bun publish --access public",
         "check": "biome check .",
         "check:types": "tsc --noEmit",
         "check:fix": "biome check . --fix",
@@ -73,10 +82,10 @@
         "@types/picomatch": "^4.0.0",
         "@types/yargs": "^17.0.33",
         "autoevals": "^0.0.127",
-        "tsup": "^8.4.0",
+        "tsdown": "^0.16.6",
         "typescript": "^5.1.6"
     },
     "files": [
-        "dist/*"
+        "dist/**/*"
     ]
 }

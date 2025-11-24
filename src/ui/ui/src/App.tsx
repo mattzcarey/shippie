@@ -5,11 +5,11 @@ import { Client as Styletron } from 'styletron-engine-atomic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, DarkTheme } from 'baseui'
 import { NuqsAdapter } from 'nuqs/adapters/react'
-import { useQueryState, parseAsString, parseAsBoolean } from 'nuqs'
+import { useQueryState, parseAsString, parseAsBoolean, parseAsArrayOf } from 'nuqs'
 import { useCommits } from './hooks/useCommits'
 import { useBranchInfo } from './hooks/useBranchInfo'
 import { FileTreeSidebar } from './components/FileTreeSidebar'
-import { DiffView } from './components/DiffView'
+import { CodeView } from './components/CodeView'
 import { CommitTimeline } from './components/CommitTimeline'
 import { BranchSelector } from './components/BranchSelector'
 import { BranchProvider, useBranchContext } from './contexts/BranchContext'
@@ -50,6 +50,9 @@ function AppContent() {
   const [selectedFile, setSelectedFile] = useQueryState('file', parseAsString)
   const [expandedFile, setExpandedFile] = useQueryState('expanded', parseAsString)
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useQueryState('leftCollapsed', parseAsBoolean.withDefault(false))
+  const [collapsedFolders, setCollapsedFolders] = useQueryState('collapsedFolders', parseAsArrayOf(parseAsString).withDefault([]))
+  const [collapsedFiles, setCollapsedFiles] = useQueryState('collapsedFiles', parseAsArrayOf(parseAsString).withDefault([]))
+  const [searchQuery, setSearchQuery] = useQueryState('search', parseAsString.withDefault(''))
 
   if (commitsLoading) {
     return (
@@ -104,21 +107,47 @@ function AppContent() {
           <FileTreeSidebar
             commit={currentCommit}
             selectedFile={selectedFile}
-            onSelectFile={setSelectedFile}
+            onSelectFile={(file) => {
+              setSelectedFile(file)
+              // Auto-expand the file if it's collapsed
+              if (collapsedFiles.includes(file)) {
+                setCollapsedFiles(collapsedFiles.filter(f => f !== file))
+              }
+            }}
             onCollapse={() => setLeftSidebarCollapsed(true)}
             expandedFile={expandedFile}
             onToggleExpand={setExpandedFile}
+            collapsedFolders={collapsedFolders}
+            onToggleFolder={(folder) => {
+              const index = collapsedFolders.indexOf(folder)
+              if (index >= 0) {
+                setCollapsedFolders(collapsedFolders.filter((_, i) => i !== index))
+              } else {
+                setCollapsedFolders([...collapsedFolders, folder])
+              }
+            }}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
         )}
 
-        {/* Center - Diff View */}
-        <DiffView
+        {/* Center - Code View */}
+        <CodeView
           commit={currentCommit}
           selectedFile={selectedFile}
           onExpandSidebar={() => setLeftSidebarCollapsed(false)}
           sidebarCollapsed={leftSidebarCollapsed}
           expandedFile={expandedFile}
           onToggleExpand={setExpandedFile}
+          collapsedFiles={collapsedFiles}
+          onToggleFileCollapse={(file) => {
+            const index = collapsedFiles.indexOf(file)
+            if (index >= 0) {
+              setCollapsedFiles(collapsedFiles.filter((_, i) => i !== index))
+            } else {
+              setCollapsedFiles([...collapsedFiles, file])
+            }
+          }}
         />
 
         {/* Right Sidebar - Commit Timeline */}

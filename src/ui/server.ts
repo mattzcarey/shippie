@@ -4,12 +4,41 @@ import { serveStatic } from "hono/bun";
 import { execSync } from "node:child_process";
 import { promisify } from "node:util";
 import { exec } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { logger } from "../common/utils/logger";
 import { getCommitHistory } from "./git/commits";
 import { applyRestack } from "./git/apply";
 import type { RestackOperation } from "../common/types";
 
 const execAsync = promisify(exec);
+
+// Helper to find the UI assets directory
+const findUIAssetsPath = (): string => {
+  // When running from source (development)
+  const devPath = "./src/ui/ui/dist";
+  if (existsSync(devPath)) {
+    return devPath;
+  }
+
+  // When running from published npm package
+  // import.meta.url will be something like: file:///path/to/node_modules/shippie/dist/ui/server.js
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  const distPath = join(currentDir, "../ui-assets");
+  if (existsSync(distPath)) {
+    return distPath;
+  }
+
+  // Fallback for different structures
+  const fallbackPath = "./dist/ui-assets";
+  if (existsSync(fallbackPath)) {
+    return fallbackPath;
+  }
+
+  logger.warn("Could not find UI assets, using default path");
+  return devPath;
+};
 
 export type ServerConfig = {
   port: number;
@@ -167,7 +196,9 @@ export const createStackServer = async (config: ServerConfig) => {
   });
 
   // Serve React build
-  app.use("/*", serveStatic({ root: "./src/stack/ui/dist" }));
+  const uiAssetsPath = findUIAssetsPath();
+  logger.debug(`Serving UI assets from: ${uiAssetsPath}`);
+  app.use("/*", serveStatic({ root: uiAssetsPath }));
 
   // Start server using Bun's native HTTP
   const server = Bun.serve({
