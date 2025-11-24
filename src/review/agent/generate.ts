@@ -1,8 +1,8 @@
 import {
   type GenerateTextResult,
+  generateText,
   type LanguageModelV1,
   type Tool,
-  generateText,
 } from 'ai'
 import { logger } from '../../common/utils/logger'
 

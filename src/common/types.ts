@@ -42,4 +42,74 @@ export type ReviewArgs = BaseArgs & {
   customInstructions?: string
 }
 
-export type ParsedArgs = ConfigureArgs | ReviewArgs
+// Arguments for the stack command
+export type StackArgs = BaseArgs & {
+  port: number
+  commits: number
+  open: boolean
+}
+
+export type ParsedArgs = ConfigureArgs | ReviewArgs | StackArgs
+
+// Git types for commit restructuring (stack command)
+export type CommitInfo = {
+  hash: string
+  shortHash: string
+  author: string
+  date: string
+  message: string
+  filesChanged: string[]
+}
+
+export type Hunk = {
+  id: string // unique ID for UI tracking
+  fileId: string
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  content: string // the actual diff content
+  header: string // @@ ... @@ line
+}
+
+export type FileChange = {
+  id: string
+  fileName: string
+  changeType: 'added' | 'modified' | 'deleted' | 'renamed'
+  hunks: Hunk[]
+  oldPath?: string // for renames
+  fullContent?: string // full file content after changes (for expanded view)
+}
+
+export type StackCommit = {
+  commit: CommitInfo
+  changes: FileChange[]
+  selected: boolean // for UI selection
+}
+
+export type RestackOperation = {
+  targetCommitIndex: number // which commit (new or existing)
+  hunkId: string
+  fileId: string
+}
+
+// Types for the restack API
+export type RestackLine = {
+  id: string // unique ID: commitHash-fileId-hunkId-line-index
+  commitHash: string
+  fileName: string
+  content: string
+  lineType: 'add' | 'delete'
+}
+
+export type RestackCommit = {
+  message: string
+  lineIds: string[] // IDs of lines to include in this commit
+}
+
+export type RestackRequest = {
+  baseBranch: string
+  selectedCommitHashes: string[] // Original commits being restacked
+  newCommits: RestackCommit[]
+  allLines: RestackLine[] // All available lines from selected commits
+}

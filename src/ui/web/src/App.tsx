@@ -1,0 +1,259 @@
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { BaseProvider, DarkTheme } from 'baseui'
+import { Loader2 } from 'lucide-react'
+import { parseAsArrayOf, parseAsBoolean, parseAsString, useQueryState } from 'nuqs'
+import { NuqsAdapter } from 'nuqs/adapters/react'
+import { useState } from 'react'
+import { Client as Styletron } from 'styletron-engine-atomic'
+import { Provider as StyletronProvider } from 'styletron-react'
+import { BranchSelector } from './components/BranchSelector'
+import { CodeView } from './components/CodeView'
+import { CommitTimeline } from './components/CommitTimeline'
+import { FileTreeSidebar } from './components/FileTreeSidebar'
+import { RestackPanel } from './components/RestackPanel'
+import { BranchProvider, useBranchContext } from './contexts/BranchContext'
+import { useBranchInfo } from './hooks/useBranchInfo'
+import { useCommits } from './hooks/useCommits'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      gcTime: 1000 * 60 * 60, // 1 hour - must match or exceed persister maxAge
+      staleTime: 1000 * 60 * 10, // Consider data fresh for 10 minutes
+    },
+  },
+})
+
+const persister = createAsyncStoragePersister({
+  storage: window.localStorage,
+  key: 'STACK_QUERY_CACHE',
+})
+
+const engine = new Styletron()
+
+function AppContent() {
+  const { data: branchInfo } = useBranchInfo()
+  const {
+    baseBranch: selectedBaseBranch,
+    currentBranch: selectedCurrentBranch,
+    setBaseBranch,
+    setCurrentBranch,
+  } = useBranchContext()
+
+  const baseBranch = selectedBaseBranch || branchInfo?.baseBranch
+  const currentBranch = selectedCurrentBranch || branchInfo?.currentBranch
+
+  const {
+    data: commits = [],
+    isLoading: commitsLoading,
+    error: commitsError,
+  } = useCommits(baseBranch, currentBranch)
+
+  // URL state management with nuqs
+  const [selectedCommit, setSelectedCommit] = useQueryState('commit', parseAsString)
+  const [selectedFile, setSelectedFile] = useQueryState('file', parseAsString)
+  const [expandedFile, setExpandedFile] = useQueryState('expanded', parseAsString)
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useQueryState(
+    'leftCollapsed',
+    parseAsBoolean.withDefault(false)
+  )
+  const [collapsedFolders, setCollapsedFolders] = useQueryState(
+    'collapsedFolders',
+    parseAsArrayOf(parseAsString).withDefault([])
+  )
+  const [collapsedFiles, setCollapsedFiles] = useQueryState(
+    'collapsedFiles',
+    parseAsArrayOf(parseAsString).withDefault([])
+  )
+  const [searchQuery, setSearchQuery] = useQueryState(
+    'search',
+    parseAsString.withDefault('')
+  )
+
+  // Restack mode state
+  const [editMode, setEditMode] = useState(false)
+  const [selectedCommitsForRestack, setSelectedCommitsForRestack] = useState<Set<string>>(
+    new Set()
+  )
+
+  const handleToggleEditMode = () => {
+    setEditMode(!editMode)
+    // Clear selections when exiting edit mode
+    if (editMode) {
+      setSelectedCommitsForRestack(new Set())
+    }
+  }
+
+  const handleToggleCommitForRestack = (hash: string) => {
+    const newSelection = new Set(selectedCommitsForRestack)
+    if (newSelection.has(hash)) {
+      newSelection.delete(hash)
+    } else {
+      newSelection.add(hash)
+    }
+    setSelectedCommitsForRestack(newSelection)
+  }
+
+  if (commitsLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: '#09090b',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <Loader2
+            style={{ width: 32, height: 32, margin: '0 auto 16px', color: '#10b981' }}
+          />
+          <p style={{ color: '#a1a1aa', fontSize: 14 }}>Loading repository...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (commitsError) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: '#09090b',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 400,
+            padding: 24,
+            backgroundColor: '#450a0a',
+            border: '1px solid #991b1b',
+          }}
+        >
+          <h2 style={{ color: '#f87171', fontSize: 14, marginBottom: 8 }}>ERROR</h2>
+          <p style={{ color: '#fca5a5', fontSize: 12 }}>{String(commitsError)}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const currentCommit =
+    commits.find((c) => c.commit.hash === selectedCommit) || commits[0]
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        backgroundColor: '#09090b',
+        color: '#fafafa',
+      }}
+    >
+      {/* Top Bar - Branch Selector */}
+      <BranchSelector
+        currentBranch={currentBranch || 'main'}
+        baseBranch={baseBranch || 'main'}
+        onCurrentBranchChange={setCurrentBranch}
+        onBaseBranchChange={setBaseBranch}
+      />
+
+      {/* Main Content Area */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Left Sidebar - File Tree */}
+        {!leftSidebarCollapsed && (
+          <FileTreeSidebar
+            commit={currentCommit}
+            selectedFile={selectedFile}
+            onSelectFile={(file) => {
+              setSelectedFile(file)
+              // Auto-expand the file if it's collapsed
+              if (collapsedFiles.includes(file)) {
+                setCollapsedFiles(collapsedFiles.filter((f) => f !== file))
+              }
+            }}
+            onCollapse={() => setLeftSidebarCollapsed(true)}
+            expandedFile={expandedFile}
+            onToggleExpand={setExpandedFile}
+            collapsedFolders={collapsedFolders}
+            onToggleFolder={(folder) => {
+              const index = collapsedFolders.indexOf(folder)
+              if (index >= 0) {
+                setCollapsedFolders(collapsedFolders.filter((_, i) => i !== index))
+              } else {
+                setCollapsedFolders([...collapsedFolders, folder])
+              }
+            }}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        )}
+
+        {/* Center - Code View or Restack Panel */}
+        {editMode && selectedCommitsForRestack.size > 0 ? (
+          <RestackPanel
+            selectedCommits={commits.filter((c) =>
+              selectedCommitsForRestack.has(c.commit.hash)
+            )}
+            onExit={handleToggleEditMode}
+          />
+        ) : (
+          <CodeView
+            commit={currentCommit}
+            selectedFile={selectedFile}
+            onExpandSidebar={() => setLeftSidebarCollapsed(false)}
+            sidebarCollapsed={leftSidebarCollapsed}
+            expandedFile={expandedFile}
+            onToggleExpand={setExpandedFile}
+            collapsedFiles={collapsedFiles}
+            onToggleFileCollapse={(file) => {
+              const index = collapsedFiles.indexOf(file)
+              if (index >= 0) {
+                setCollapsedFiles(collapsedFiles.filter((_, i) => i !== index))
+              } else {
+                setCollapsedFiles([...collapsedFiles, file])
+              }
+            }}
+          />
+        )}
+
+        {/* Right Sidebar - Commit Timeline */}
+        <CommitTimeline
+          commits={commits}
+          selectedCommit={selectedCommit}
+          onSelectCommit={setSelectedCommit}
+          editMode={editMode}
+          onToggleEditMode={handleToggleEditMode}
+          selectedCommitsForRestack={selectedCommitsForRestack}
+          onToggleCommitForRestack={handleToggleCommitForRestack}
+        />
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <NuqsAdapter>
+      <StyletronProvider value={engine}>
+        <BaseProvider theme={DarkTheme}>
+          <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+            <BranchProvider>
+              <AppContent />
+            </BranchProvider>
+          </PersistQueryClientProvider>
+        </BaseProvider>
+      </StyletronProvider>
+    </NuqsAdapter>
+  )
+}
+
+export default App

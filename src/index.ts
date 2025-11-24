@@ -2,7 +2,7 @@
 import dotenv from 'dotenv'
 
 import { getYargs } from './args'
-import type { ConfigureArgs, ParsedArgs, ReviewArgs } from './common/types'
+import type { ConfigureArgs, ParsedArgs, ReviewArgs, StackArgs } from './common/types'
 import { logger } from './common/utils/logger'
 
 dotenv.config()
@@ -22,6 +22,11 @@ const main = async () => {
       case 'review': {
         const { review } = await import('./review')
         await review(argv as ReviewArgs)
+        break
+      }
+      case 'ui': {
+        const { ui } = await import('./ui')
+        await ui(argv as StackArgs)
         break
       }
       default:

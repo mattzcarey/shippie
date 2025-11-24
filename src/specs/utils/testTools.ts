@@ -1,6 +1,5 @@
+import type { LanguageModelV1, Tool } from 'ai'
 import { tool } from 'ai'
-import type { Tool } from 'ai'
-import type { LanguageModelV1 } from 'ai'
 import { z } from 'zod'
 import {
   createSubAgentTool,

@@ -59,7 +59,7 @@ export const grepTool = tool({
               resultCount++
             }
           }
-        } catch (err) {
+        } catch (_err) {
           // Skip files that can't be read
         }
       }

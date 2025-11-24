@@ -171,7 +171,7 @@ export const findImportantFiles = async (
         path: relativePath,
         content: content.trim(),
       })
-    } catch (error) {
+    } catch (_error) {
       logger.debug(`Important file ${fileName} not found or couldn't be read`)
     }
   }
