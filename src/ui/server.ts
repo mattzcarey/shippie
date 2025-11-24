@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { serveStatic } from "hono/bun";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { serve } from "@hono/node-server";
 import { execSync } from "node:child_process";
 import { promisify } from "node:util";
 import { exec } from "node:child_process";
@@ -9,8 +10,6 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { logger } from "../common/utils/logger";
 import { getCommitHistory } from "./git/commits";
-import { applyRestack } from "./git/apply";
-import type { RestackOperation } from "../common/types";
 
 const execAsync = promisify(exec);
 
@@ -174,36 +173,15 @@ export const createStackServer = async (config: ServerConfig) => {
     }
   });
 
-  // Apply restack operations
-  app.post("/api/restack", async (c) => {
-    try {
-      logger.info("Applying restack operations...");
-      const operations: RestackOperation[] = await c.req.json();
-      logger.debug(`Received ${operations.length} operations`);
-
-      await applyRestack(config.gitRoot, operations);
-
-      logger.info("Restack completed successfully!");
-      return c.json({ success: true, message: "Restack completed" });
-    } catch (error) {
-      logger.error("Failed to apply restack:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to apply restack operations";
-      return c.json({ error: message }, 500);
-    }
-  });
-
   // Serve React build
   const uiAssetsPath = findUIAssetsPath();
   logger.debug(`Serving UI assets from: ${uiAssetsPath}`);
   app.use("/*", serveStatic({ root: uiAssetsPath }));
 
-  // Start server using Bun's native HTTP
-  const server = Bun.serve({
-    port: config.port,
+  // Start server using Node.js HTTP (compatible with npx)
+  const server = serve({
     fetch: app.fetch,
+    port: config.port,
   });
 
   logger.info(`Server started on port ${config.port}`);
