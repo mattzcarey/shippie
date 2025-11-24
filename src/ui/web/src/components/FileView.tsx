@@ -1,5 +1,5 @@
-import type { StackCommit, RestackOperation } from '../types'
-import { File, FileText, FilePlus, FileX, FileEdit } from 'lucide-react'
+import { File, FileEdit, FilePlus, FileText, FileX } from 'lucide-react'
+import type { RestackOperation, StackCommit } from '../types'
 
 type FileViewProps = {
   commits: StackCommit[]
@@ -83,9 +83,7 @@ export const FileView = ({ commits, onHunkSelect }: FileViewProps) => {
                     {commit.commit.shortHash}
                   </span>
                   <span className="text-xs text-gray-400">•</span>
-                  <span className="text-sm text-gray-600">
-                    {commit.commit.author}
-                  </span>
+                  <span className="text-sm text-gray-600">{commit.commit.author}</span>
                 </div>
                 <p className="text-base font-medium text-gray-800">
                   {commit.commit.message}
@@ -102,15 +100,11 @@ export const FileView = ({ commits, onHunkSelect }: FileViewProps) => {
             >
               {/* File Header */}
               <div
-                className={`px-4 py-3 border-b ${getChangeTypeColor(
-                  file.changeType
-                )}`}
+                className={`px-4 py-3 border-b ${getChangeTypeColor(file.changeType)}`}
               >
                 <div className="flex items-center gap-2">
                   {getFileIcon(file.changeType)}
-                  <span className="font-mono text-sm font-medium">
-                    {file.fileName}
-                  </span>
+                  <span className="font-mono text-sm font-medium">{file.fileName}</span>
                   <span className="text-xs uppercase font-semibold">
                     {file.changeType}
                   </span>
@@ -122,6 +116,7 @@ export const FileView = ({ commits, onHunkSelect }: FileViewProps) => {
                 {file.hunks.map((hunk) => (
                   <div key={hunk.id} className="group">
                     <button
+                      type="button"
                       onClick={() =>
                         onHunkSelect({
                           targetCommitIndex: 0,
@@ -142,9 +137,7 @@ export const FileView = ({ commits, onHunkSelect }: FileViewProps) => {
                       <div className="text-left">
                         {hunk.content
                           .split('\n')
-                          .map((line, lineIndex) =>
-                            renderDiffLine(line, lineIndex)
-                          )}
+                          .map((line, lineIndex) => renderDiffLine(line, lineIndex))}
                       </div>
                     </button>
                   </div>

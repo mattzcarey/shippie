@@ -1,7 +1,8 @@
-import type { StackCommit, RestackOperation } from '../types'
+import type { RestackOperation, StackCommit } from '../types'
 
 // Use the current origin (window.location.origin) so it works on any port
-const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+const API_BASE_URL =
+  typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
 
 export const api = {
   async getCommits(baseBranch?: string, currentBranch?: string): Promise<StackCommit[]> {

@@ -82,7 +82,7 @@
         "zod": "^3.24.1"
     },
     "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
+        "@biomejs/biome": "^2.3.7",
         "@types/bun": "^1.1.16",
         "@types/picomatch": "^4.0.0",
         "@types/yargs": "^17.0.33",

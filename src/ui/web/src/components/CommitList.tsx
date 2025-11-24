@@ -1,5 +1,5 @@
+import { Check, GitCommit } from 'lucide-react'
 import type { StackCommit } from '../types'
-import { GitCommit, Check } from 'lucide-react'
 
 type CommitListProps = {
   commits: StackCommit[]
@@ -7,21 +7,16 @@ type CommitListProps = {
   onToggle: (hash: string) => void
 }
 
-export const CommitList = ({
-  commits,
-  selectedHashes,
-  onToggle,
-}: CommitListProps) => {
+export const CommitList = ({ commits, selectedHashes, onToggle }: CommitListProps) => {
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        Select Commits
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">Select Commits</h2>
       <div className="space-y-2">
         {commits.map((commit) => {
           const isSelected = selectedHashes.includes(commit.commit.hash)
           return (
             <button
+              type="button"
               key={commit.commit.hash}
               onClick={() => onToggle(commit.commit.hash)}
               className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
@@ -33,9 +28,7 @@ export const CommitList = ({
               <div className="flex items-start gap-3">
                 <div
                   className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
-                    isSelected
-                      ? 'bg-blue-500 border-blue-500'
-                      : 'border-gray-300'
+                    isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
                   }`}
                 >
                   {isSelected && <Check className="w-3 h-3 text-white" />}

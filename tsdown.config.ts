@@ -1,62 +1,56 @@
-import fs from "node:fs";
-import { join } from "node:path";
-import { existsSync } from "node:fs";
-import { defineConfig } from "tsdown";
+import fs, { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { defineConfig } from 'tsdown'
 
 export default defineConfig({
-  entry: ["src/index.ts"],
-  format: ["esm"],
+  entry: ['src/index.ts'],
+  format: ['esm'],
   dts: true,
   clean: true,
   minify: true,
   treeshake: true,
   shims: true,
   async onSuccess() {
-    console.log("Build completed! Running post-build tasks...");
+    console.log('Build completed! Running post-build tasks...')
 
     // Copy templates
-    const templates = ["github-pr.yml", "gitlab-pr.yml", "azdev-pr.yml"];
+    const templates = ['github-pr.yml', 'gitlab-pr.yml', 'azdev-pr.yml']
 
     for (const template of templates) {
-      const content = await fs.promises.readFile(
-        join("./templates", template),
-        "utf8"
-      );
-      await fs.promises.writeFile(join("./dist", template), content);
+      const content = await fs.promises.readFile(join('./templates', template), 'utf8')
+      await fs.promises.writeFile(join('./dist', template), content)
     }
-    console.log("✓ Templates copied");
+    console.log('✓ Templates copied')
 
     // Handle React UI assets
-    const uiSrcPath = join("./src/ui/web/dist");
-    const uiDistPath = join("./dist/ui-assets");
+    const uiSrcPath = join('./src/ui/web/dist')
+    const uiDistPath = join('./dist/ui-assets')
 
     if (!existsSync(uiSrcPath)) {
-      throw new Error(
-        "UI assets not found. Please run `bun run build:ui` first."
-      );
+      throw new Error('UI assets not found. Please run `bun run build:ui` first.')
     }
 
     // Copy the built UI assets to dist/ui-assets
-    console.log("Copying UI assets to dist/ui-assets...");
-    await fs.promises.mkdir(uiDistPath, { recursive: true });
+    console.log('Copying UI assets to dist/ui-assets...')
+    await fs.promises.mkdir(uiDistPath, { recursive: true })
 
     // Copy all files from ui/dist to dist/ui-assets
     const copyRecursive = async (src: string, dest: string) => {
-      const entries = await fs.promises.readdir(src, { withFileTypes: true });
+      const entries = await fs.promises.readdir(src, { withFileTypes: true })
 
       for (const entry of entries) {
-        const srcPath = join(src, entry.name);
-        const destPath = join(dest, entry.name);
+        const srcPath = join(src, entry.name)
+        const destPath = join(dest, entry.name)
 
         if (entry.isDirectory()) {
-          await fs.promises.mkdir(destPath, { recursive: true });
-          await copyRecursive(srcPath, destPath);
+          await fs.promises.mkdir(destPath, { recursive: true })
+          await copyRecursive(srcPath, destPath)
         } else {
-          await fs.promises.copyFile(srcPath, destPath);
+          await fs.promises.copyFile(srcPath, destPath)
         }
       }
-    };
+    }
 
-    await copyRecursive(uiSrcPath, uiDistPath);
+    await copyRecursive(uiSrcPath, uiDistPath)
   },
-});
+})

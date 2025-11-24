@@ -11,7 +11,11 @@ type FileContentResponse = {
   deletedInCommit?: boolean
 }
 
-export const useFileContent = ({ commitHash, filePath, enabled = true }: UseFileContentParams) => {
+export const useFileContent = ({
+  commitHash,
+  filePath,
+  enabled = true,
+}: UseFileContentParams) => {
   return useQuery({
     queryKey: ['file-content', commitHash, filePath],
     queryFn: async () => {

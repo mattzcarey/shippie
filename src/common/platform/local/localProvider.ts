@@ -76,7 +76,7 @@ export const localProvider = async (): Promise<PlatformProvider> => {
 
         repoIds[repoPath] = repoHash
         await writeFile(REPO_IDS_FILE, JSON.stringify(repoIds, null, 2))
-      } catch (err) {
+      } catch (_err) {
         const repoIds = { [repoPath]: repoHash }
         await writeFile(REPO_IDS_FILE, JSON.stringify(repoIds, null, 2))
       }

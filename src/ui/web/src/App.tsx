@@ -1,19 +1,19 @@
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
+import { BaseProvider, DarkTheme } from 'baseui'
+import { Loader2 } from 'lucide-react'
+import { parseAsArrayOf, parseAsBoolean, parseAsString, useQueryState } from 'nuqs'
+import { NuqsAdapter } from 'nuqs/adapters/react'
 import { Client as Styletron } from 'styletron-engine-atomic'
 import { Provider as StyletronProvider } from 'styletron-react'
-import { BaseProvider, DarkTheme } from 'baseui'
-import { NuqsAdapter } from 'nuqs/adapters/react'
-import { useQueryState, parseAsString, parseAsBoolean, parseAsArrayOf } from 'nuqs'
-import { useCommits } from './hooks/useCommits'
-import { useBranchInfo } from './hooks/useBranchInfo'
-import { FileTreeSidebar } from './components/FileTreeSidebar'
+import { BranchSelector } from './components/BranchSelector'
 import { CodeView } from './components/CodeView'
 import { CommitTimeline } from './components/CommitTimeline'
-import { BranchSelector } from './components/BranchSelector'
+import { FileTreeSidebar } from './components/FileTreeSidebar'
 import { BranchProvider, useBranchContext } from './contexts/BranchContext'
-import { Loader2 } from 'lucide-react'
+import { useBranchInfo } from './hooks/useBranchInfo'
+import { useCommits } from './hooks/useCommits'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,36 +35,58 @@ const engine = new Styletron()
 
 function AppContent() {
   const { data: branchInfo } = useBranchInfo()
-  const { baseBranch: selectedBaseBranch, currentBranch: selectedCurrentBranch, setBaseBranch, setCurrentBranch } = useBranchContext()
+  const {
+    baseBranch: selectedBaseBranch,
+    currentBranch: selectedCurrentBranch,
+    setBaseBranch,
+    setCurrentBranch,
+  } = useBranchContext()
 
   const baseBranch = selectedBaseBranch || branchInfo?.baseBranch
   const currentBranch = selectedCurrentBranch || branchInfo?.currentBranch
 
-  const { data: commits = [], isLoading: commitsLoading, error: commitsError } = useCommits(
-    baseBranch,
-    currentBranch
-  )
+  const {
+    data: commits = [],
+    isLoading: commitsLoading,
+    error: commitsError,
+  } = useCommits(baseBranch, currentBranch)
 
   // URL state management with nuqs
   const [selectedCommit, setSelectedCommit] = useQueryState('commit', parseAsString)
   const [selectedFile, setSelectedFile] = useQueryState('file', parseAsString)
   const [expandedFile, setExpandedFile] = useQueryState('expanded', parseAsString)
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useQueryState('leftCollapsed', parseAsBoolean.withDefault(false))
-  const [collapsedFolders, setCollapsedFolders] = useQueryState('collapsedFolders', parseAsArrayOf(parseAsString).withDefault([]))
-  const [collapsedFiles, setCollapsedFiles] = useQueryState('collapsedFiles', parseAsArrayOf(parseAsString).withDefault([]))
-  const [searchQuery, setSearchQuery] = useQueryState('search', parseAsString.withDefault(''))
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useQueryState(
+    'leftCollapsed',
+    parseAsBoolean.withDefault(false)
+  )
+  const [collapsedFolders, setCollapsedFolders] = useQueryState(
+    'collapsedFolders',
+    parseAsArrayOf(parseAsString).withDefault([])
+  )
+  const [collapsedFiles, setCollapsedFiles] = useQueryState(
+    'collapsedFiles',
+    parseAsArrayOf(parseAsString).withDefault([])
+  )
+  const [searchQuery, setSearchQuery] = useQueryState(
+    'search',
+    parseAsString.withDefault('')
+  )
 
   if (commitsLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#09090b'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: '#09090b',
+        }}
+      >
         <div style={{ textAlign: 'center' }}>
-          <Loader2 style={{ width: 32, height: 32, margin: '0 auto 16px', color: '#10b981' }} />
+          <Loader2
+            style={{ width: 32, height: 32, margin: '0 auto 16px', color: '#10b981' }}
+          />
           <p style={{ color: '#a1a1aa', fontSize: 14 }}>Loading repository...</p>
         </div>
       </div>
@@ -73,14 +95,23 @@ function AppContent() {
 
   if (commitsError) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#09090b'
-      }}>
-        <div style={{ maxWidth: 400, padding: 24, backgroundColor: '#450a0a', border: '1px solid #991b1b' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: '#09090b',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 400,
+            padding: 24,
+            backgroundColor: '#450a0a',
+            border: '1px solid #991b1b',
+          }}
+        >
           <h2 style={{ color: '#f87171', fontSize: 14, marginBottom: 8 }}>ERROR</h2>
           <p style={{ color: '#fca5a5', fontSize: 12 }}>{String(commitsError)}</p>
         </div>
@@ -88,10 +119,19 @@ function AppContent() {
     )
   }
 
-  const currentCommit = commits.find(c => c.commit.hash === selectedCommit) || commits[0]
+  const currentCommit =
+    commits.find((c) => c.commit.hash === selectedCommit) || commits[0]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#09090b', color: '#fafafa' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        backgroundColor: '#09090b',
+        color: '#fafafa',
+      }}
+    >
       {/* Top Bar - Branch Selector */}
       <BranchSelector
         currentBranch={currentBranch || 'main'}
@@ -111,7 +151,7 @@ function AppContent() {
               setSelectedFile(file)
               // Auto-expand the file if it's collapsed
               if (collapsedFiles.includes(file)) {
-                setCollapsedFiles(collapsedFiles.filter(f => f !== file))
+                setCollapsedFiles(collapsedFiles.filter((f) => f !== file))
               }
             }}
             onCollapse={() => setLeftSidebarCollapsed(true)}
@@ -166,10 +206,7 @@ function App() {
     <NuqsAdapter>
       <StyletronProvider value={engine}>
         <BaseProvider theme={DarkTheme}>
-          <PersistQueryClientProvider
-            client={queryClient}
-            persistOptions={{ persister }}
-          >
+          <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
             <BranchProvider>
               <AppContent />
             </BranchProvider>

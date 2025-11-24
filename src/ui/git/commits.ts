@@ -1,43 +1,43 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import type { StackCommit, FileChange, Hunk } from "../../common/types";
-import { logger } from "../../common/utils/logger";
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
+import type { FileChange, Hunk, StackCommit } from '../../common/types'
+import { logger } from '../../common/utils/logger'
 
-const execAsync = promisify(exec);
+const execAsync = promisify(exec)
 
 /**
  * Gets the current branch name
  */
 const getCurrentBranch = async (gitRoot: string): Promise<string> => {
   try {
-    const { stdout } = await execAsync("git rev-parse --abbrev-ref HEAD", {
+    const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', {
       cwd: gitRoot,
-    });
-    return stdout.trim();
+    })
+    return stdout.trim()
   } catch (error) {
-    logger.error("Failed to get current branch:", error);
-    return "HEAD";
+    logger.error('Failed to get current branch:', error)
+    return 'HEAD'
   }
-};
+}
 
 /**
  * Determines the base branch to compare against
  */
 const getBaseBranch = async (gitRoot: string): Promise<string> => {
   // Try origin/main first, then origin/master, then main, then master
-  const branches = ["origin/main", "origin/master", "main", "master"];
+  const branches = ['origin/main', 'origin/master', 'main', 'master']
 
   for (const branch of branches) {
     try {
-      await execAsync(`git rev-parse --verify ${branch}`, { cwd: gitRoot });
-      return branch;
+      await execAsync(`git rev-parse --verify ${branch}`, { cwd: gitRoot })
+      return branch
     } catch {
       // Branch doesn't exist, try next
     }
   }
 
-  return "main"; // fallback
-};
+  return 'main' // fallback
+}
 
 /**
  * Fetches the commit history with full diff information
@@ -50,56 +50,58 @@ export const getCommitHistory = async (
 ): Promise<StackCommit[]> => {
   try {
     // Get current branch and base branch
-    const currentBranch =
-      customCurrentBranch || (await getCurrentBranch(gitRoot));
-    const baseBranch = customBaseBranch || (await getBaseBranch(gitRoot));
+    const currentBranch = customCurrentBranch || (await getCurrentBranch(gitRoot))
+    const baseBranch = customBaseBranch || (await getBaseBranch(gitRoot))
 
     logger.info(
       `Branch comparison - custom current: ${customCurrentBranch}, custom base: ${customBaseBranch}`
-    );
+    )
     logger.info(
       `Branch comparison - resolved current: ${currentBranch}, resolved base: ${baseBranch}`
-    );
+    )
 
     // Get commits between base and current (commits ahead of base)
     // Use the range syntax: base..branch to get commits in branch but not in base
-    const logCommand = `git log ${baseBranch}..${currentBranch} --pretty=format:"%H|%an|%ad|%s" --date=short`;
-    const { stdout: logOutput } = await execAsync(logCommand, { cwd: gitRoot });
+    const logCommand = `git log ${baseBranch}..${currentBranch} --pretty=format:"%H|%an|%ad|%s" --date=short`
+    const { stdout: logOutput } = await execAsync(logCommand, { cwd: gitRoot })
 
     if (!logOutput.trim()) {
-      logger.warn("No commits ahead of base branch");
-      return [];
+      logger.warn('No commits ahead of base branch')
+      return []
     }
 
-    const commitLines = logOutput.trim().split("\n");
-    const commits: StackCommit[] = [];
+    const commitLines = logOutput.trim().split('\n')
+    const commits: StackCommit[] = []
 
     for (const line of commitLines) {
-      const [hash, author, date, message] = line.split("|");
-      const shortHash = hash.substring(0, 7);
+      const [hash, author, date, message] = line.split('|')
+      const shortHash = hash.substring(0, 7)
 
       // Get files changed in this commit
       // Use -M to detect renames, --name-status to see rename info
       const { stdout: filesOutput } = await execAsync(
         `git diff-tree --no-commit-id --name-status -r -M ${hash}`,
         { cwd: gitRoot }
-      );
+      )
 
       // Parse the output which is in format: "STATUS\tFILE" or "R100\tOLDNAME\tNEWNAME" for renames
-      const filesChanged: string[] = [];
-      for (const line of filesOutput.trim().split("\n").filter(f => f.length > 0)) {
-        const parts = line.split("\t");
-        if (parts[0].startsWith("R")) {
+      const filesChanged: string[] = []
+      for (const line of filesOutput
+        .trim()
+        .split('\n')
+        .filter((f) => f.length > 0)) {
+        const parts = line.split('\t')
+        if (parts[0].startsWith('R')) {
           // Rename: use the new filename (last part)
-          filesChanged.push(parts[2]);
+          filesChanged.push(parts[2])
         } else {
           // Other status (A, M, D): use the filename (second part)
-          filesChanged.push(parts[1]);
+          filesChanged.push(parts[1])
         }
       }
 
       // Get detailed diff for this commit
-      const changes = await getCommitDiff(gitRoot, hash);
+      const changes = await getCommitDiff(gitRoot, hash)
 
       commits.push({
         commit: {
@@ -112,20 +114,20 @@ export const getCommitHistory = async (
         },
         changes,
         selected: false,
-      });
+      })
     }
 
-    logger.debug(`Successfully parsed ${commits.length} commits`);
-    return commits;
+    logger.debug(`Successfully parsed ${commits.length} commits`)
+    return commits
   } catch (error) {
-    logger.error("Failed to get commit history:", error);
+    logger.error('Failed to get commit history:', error)
     throw new Error(
       `Failed to fetch commits: ${
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : 'Unknown error'
       }`
-    );
+    )
   }
-};
+}
 
 /**
  * Gets the detailed diff for a specific commit
@@ -140,87 +142,87 @@ const getCommitDiff = async (
     const { stdout: diffOutput } = await execAsync(
       `git show ${commitHash} --unified=3 --format= -M`,
       { cwd: gitRoot, maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
-    );
+    )
 
-    const changes = parseDiff(diffOutput);
-    return changes;
+    const changes = parseDiff(diffOutput)
+    return changes
   } catch (error) {
-    logger.error(`Failed to get diff for ${commitHash}:`, error);
-    return [];
+    logger.error(`Failed to get diff for ${commitHash}:`, error)
+    return []
   }
-};
+}
 
 /**
  * Parses a unified diff into structured FileChange objects
  */
 const parseDiff = (diffOutput: string): FileChange[] => {
-  const files: FileChange[] = [];
-  const lines = diffOutput.split("\n");
+  const files: FileChange[] = []
+  const lines = diffOutput.split('\n')
 
-  let currentFile: FileChange | null = null;
-  let currentHunk: Hunk | null = null;
-  let hunkContent: string[] = [];
-  let hunkCounter = 0;
+  let currentFile: FileChange | null = null
+  let currentHunk: Hunk | null = null
+  let hunkContent: string[] = []
+  let hunkCounter = 0
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i]
 
     // File header: diff --git a/path b/path
-    if (line.startsWith("diff --git")) {
+    if (line.startsWith('diff --git')) {
       // Save previous hunk and file
       if (currentFile && currentHunk) {
-        currentHunk.content = hunkContent.join("\n");
-        currentFile.hunks.push(currentHunk);
+        currentHunk.content = hunkContent.join('\n')
+        currentFile.hunks.push(currentHunk)
       }
       if (currentFile) {
-        files.push(currentFile);
+        files.push(currentFile)
       }
 
       // Parse new file
-      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/)
       if (match) {
-        const fileName = match[2];
+        const fileName = match[2]
         currentFile = {
           id: `file-${files.length}`,
           fileName,
-          changeType: "modified",
+          changeType: 'modified',
           hunks: [],
-        };
-        hunkCounter = 0;
+        }
+        hunkCounter = 0
       }
-      currentHunk = null;
-      hunkContent = [];
-      continue;
+      currentHunk = null
+      hunkContent = []
+      continue
     }
 
-    if (!currentFile) continue;
+    if (!currentFile) continue
 
     // Detect file status
-    if (line.startsWith("new file mode")) {
-      currentFile.changeType = "added";
-    } else if (line.startsWith("deleted file mode")) {
-      currentFile.changeType = "deleted";
-    } else if (line.startsWith("rename from")) {
-      currentFile.changeType = "renamed";
-      currentFile.oldPath = line.replace("rename from ", "").trim();
-    } else if (line.startsWith("rename to")) {
+    if (line.startsWith('new file mode')) {
+      currentFile.changeType = 'added'
+    } else if (line.startsWith('deleted file mode')) {
+      currentFile.changeType = 'deleted'
+    } else if (line.startsWith('rename from')) {
+      currentFile.changeType = 'renamed'
+      currentFile.oldPath = line.replace('rename from ', '').trim()
+    } else if (line.startsWith('rename to')) {
       // This line comes after "rename from", just confirms the rename
       // The fileName is already set from the b/newname in the diff header
       if (currentFile) {
-        currentFile.changeType = "renamed";
+        currentFile.changeType = 'renamed'
       }
     }
 
     // Hunk header: @@ -oldStart,oldLines +newStart,newLines @@
-    if (line.startsWith("@@")) {
+    if (line.startsWith('@@')) {
       // Save previous hunk
       if (currentHunk) {
-        currentHunk.content = hunkContent.join("\n");
-        currentFile.hunks.push(currentHunk);
+        currentHunk.content = hunkContent.join('\n')
+        currentFile.hunks.push(currentHunk)
       }
 
       // Parse hunk header
-      const match = line.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+      const match = line.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
       if (match) {
         currentHunk = {
           id: `${currentFile.id}-hunk-${hunkCounter++}`,
@@ -229,34 +231,34 @@ const parseDiff = (diffOutput: string): FileChange[] => {
           oldLines: match[2] ? Number.parseInt(match[2], 10) : 1,
           newStart: Number.parseInt(match[3], 10),
           newLines: match[4] ? Number.parseInt(match[4], 10) : 1,
-          content: "",
+          content: '',
           header: line,
-        };
-        hunkContent = [line];
+        }
+        hunkContent = [line]
       }
-      continue;
+      continue
     }
 
     // Hunk content (context, additions, deletions)
     if (
       currentHunk &&
-      (line.startsWith(" ") ||
-        line.startsWith("+") ||
-        line.startsWith("-") ||
-        line.startsWith("\\"))
+      (line.startsWith(' ') ||
+        line.startsWith('+') ||
+        line.startsWith('-') ||
+        line.startsWith('\\'))
     ) {
-      hunkContent.push(line);
+      hunkContent.push(line)
     }
   }
 
   // Save last hunk and file
   if (currentFile && currentHunk) {
-    currentHunk.content = hunkContent.join("\n");
-    currentFile.hunks.push(currentHunk);
+    currentHunk.content = hunkContent.join('\n')
+    currentFile.hunks.push(currentHunk)
   }
   if (currentFile) {
-    files.push(currentFile);
+    files.push(currentFile)
   }
 
-  return files;
-};
+  return files
+}

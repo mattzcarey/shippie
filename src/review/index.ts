@@ -1,6 +1,6 @@
 import { Telemetry } from '../common/api/telemetry'
 import { getFilesWithChanges } from '../common/git/getFilesWithChanges'
-import { type ModelCreationOptions, createModel } from '../common/llm/models'
+import { createModel, type ModelCreationOptions } from '../common/llm/models'
 import { getPlatformProvider } from '../common/platform/factory'
 import type { ReviewArgs, ReviewFile } from '../common/types'
 import { logger } from '../common/utils/logger'

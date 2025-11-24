@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, type ReactNode, useContext, useState } from 'react'
 
 type BranchContextType = {
   baseBranch: string | undefined
@@ -14,7 +14,9 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
   const [currentBranch, setCurrentBranch] = useState<string | undefined>(undefined)
 
   return (
-    <BranchContext.Provider value={{ baseBranch, currentBranch, setBaseBranch, setCurrentBranch }}>
+    <BranchContext.Provider
+      value={{ baseBranch, currentBranch, setBaseBranch, setCurrentBranch }}
+    >
       {children}
     </BranchContext.Provider>
   )

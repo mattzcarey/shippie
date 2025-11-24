@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
-import { useStyletron } from 'baseui'
-import type { Hunk } from '../../types'
 import Editor from '@monaco-editor/react'
+import { useStyletron } from 'baseui'
+import { useMemo } from 'react'
+import type { Hunk } from '../../types'
 
 type EditorViewProps = {
   fileName: string
@@ -11,14 +11,31 @@ type EditorViewProps = {
   deletedFile?: boolean
 }
 
+type EditorDecoration = {
+  range: {
+    startLineNumber: number
+    startColumn: number
+    endLineNumber: number
+    endColumn: number
+  }
+  options: {
+    isWholeLine: boolean
+    className: string
+    glyphMarginClassName: string
+  }
+}
+
 // Build unified diff content with both additions and deletions
-const buildUnifiedDiff = (fileContent: string, hunks: Hunk[]): { content: string; decorations: any[] } => {
+const buildUnifiedDiff = (
+  fileContent: string,
+  hunks: Hunk[]
+): { content: string; decorations: EditorDecoration[] } => {
   if (!fileContent) {
     return { content: '', decorations: [] }
   }
   const fileLines = fileContent.split('\n')
   const result: string[] = []
-  const decorations: any[] = []
+  const decorations: EditorDecoration[] = []
 
   // Sort hunks by starting position
   const sortedHunks = [...hunks].sort((a, b) => a.newStart - b.newStart)
@@ -36,7 +53,7 @@ const buildUnifiedDiff = (fileContent: string, hunks: Hunk[]): { content: string
     }
 
     // Process hunk lines
-    const hunkLines = hunk.content.split('\n').filter(line => !line.startsWith('@@'))
+    const hunkLines = hunk.content.split('\n').filter((line) => !line.startsWith('@@'))
 
     for (const line of hunkLines) {
       if (line.startsWith('-')) {
@@ -117,7 +134,12 @@ const getLanguageFromFileName = (fileName: string): string => {
   return langMap[ext || ''] || 'typescript'
 }
 
-export const EditorView = ({ fileName, fileContent, hunks, deletedFile = false }: EditorViewProps) => {
+export const EditorView = ({
+  fileName,
+  fileContent,
+  hunks,
+  deletedFile = false,
+}: EditorViewProps) => {
   const [css] = useStyletron()
 
   const { content, decorations } = useMemo(() => {
@@ -127,27 +149,31 @@ export const EditorView = ({ fileName, fileContent, hunks, deletedFile = false }
   const language = getLanguageFromFileName(fileName)
 
   return (
-    <div className={css({
-      fontFamily: 'monospace',
-      fontSize: '12px',
-      lineHeight: '1.5',
-      backgroundColor: '#18181b',
-      height: 'calc(83vh)',
-      maxHeight: 'calc(83vh)',
-      position: 'relative',
-    })}>
+    <div
+      className={css({
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        lineHeight: '1.5',
+        backgroundColor: '#18181b',
+        height: 'calc(83vh)',
+        maxHeight: 'calc(83vh)',
+        position: 'relative',
+      })}
+    >
       {deletedFile && (
-        <div className={css({
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(127, 29, 29, 0.15)',
-          pointerEvents: 'none',
-          zIndex: 1,
-          border: '2px solid rgba(239, 68, 68, 0.3)',
-        })} />
+        <div
+          className={css({
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(127, 29, 29, 0.15)',
+            pointerEvents: 'none',
+            zIndex: 1,
+            border: '2px solid rgba(239, 68, 68, 0.3)',
+          })}
+        />
       )}
       <style>{`
         .added-line {

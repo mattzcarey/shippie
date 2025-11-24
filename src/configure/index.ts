@@ -63,7 +63,7 @@ const configureGitHub = async () => {
       logger.info(
         'Successfully added the OPENAI_API_KEY secret to your GitHub repository.'
       )
-    } catch (error) {
+    } catch (_error) {
       logger.error(
         "It seems that the GitHub CLI is not installed or there was an error during authentication. Don't forget to add the OPENAI_API_KEY to the repo settings/Environment/Actions/Repository Secrets manually."
       )
@@ -97,7 +97,7 @@ const configureGitLab = async () => {
     logger.info(
       'Successfully added the OPENAI_API_KEY secret to your GitLab repository.\n Please make sure you have set up your Gitlab access token before using this tool. Refer to the README (Gitlab CI section) for information on how to do this.'
     )
-  } catch (error) {
+  } catch (_error) {
     logger.error(
       "It seems that the GitLab CLI is not installed or there was an error during authentication. Don't forget to add the OPENAI_API_KEY and the GITLAB_TOKEN to the repo's CI/CD Variables manually. Refer to the README (Gitlab CI section)for information on how to set up your access token."
     )

@@ -1,8 +1,15 @@
-import { useMemo, useCallback } from 'react'
 import { useStyletron } from 'baseui'
-import { ChevronLeft, ChevronDown, ChevronRight, Folder, FileIcon, Search } from 'lucide-react'
-import type { StackCommit } from '../types'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  FileIcon,
+  Folder,
+  Search,
+} from 'lucide-react'
+import { useCallback, useMemo } from 'react'
 import { getChangeTypeColors } from '../theme/colors'
+import type { StackCommit } from '../types'
 
 type FileTreeSidebarProps = {
   commit: StackCommit | undefined
@@ -41,7 +48,7 @@ const buildFileTree = (files: string[]): FileTreeNode => {
       const isLastPart = i === parts.length - 1
       const path = parts.slice(0, i + 1).join('/')
 
-      let childNode = currentNode.children.find(child => child.name === part)
+      let childNode = currentNode.children.find((child) => child.name === part)
 
       if (!childNode) {
         childNode = {
@@ -74,7 +81,10 @@ export const FileTreeSidebar = ({
 }: FileTreeSidebarProps) => {
   const [css] = useStyletron()
 
-  const files = useMemo(() => commit?.commit.filesChanged || [], [commit?.commit.filesChanged])
+  const files = useMemo(
+    () => commit?.commit.filesChanged || [],
+    [commit?.commit.filesChanged]
+  )
   const fileTree = useMemo(() => buildFileTree(files), [files])
 
   // Create a map of file paths to their change types
@@ -90,18 +100,21 @@ export const FileTreeSidebar = ({
 
   const filteredFiles = useMemo(() => {
     if (!searchQuery) return files
-    return files.filter(file => file.toLowerCase().includes(searchQuery.toLowerCase()))
+    return files.filter((file) => file.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [files, searchQuery])
 
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearchChange(e.target.value)
-  }, [onSearchChange])
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onSearchChange(e.target.value)
+    },
+    [onSearchChange]
+  )
 
   if (!commit) {
     return null
   }
 
-  const renderTreeNode = (node: FileTreeNode, depth: number = 0): React.JSX.Element | null => {
+  const renderTreeNode = (node: FileTreeNode, depth = 0): React.JSX.Element | null => {
     if (!node.isDirectory && searchQuery && !filteredFiles.includes(node.path)) {
       return null
     }
@@ -112,7 +125,9 @@ export const FileTreeSidebar = ({
 
     if (node.isDirectory) {
       const hasVisibleChildren = searchQuery
-        ? node.children.some(child => !child.isDirectory && filteredFiles.includes(child.path))
+        ? node.children.some(
+            (child) => !child.isDirectory && filteredFiles.includes(child.path)
+          )
         : node.children.length > 0
 
       if (searchQuery && !hasVisibleChildren) {
@@ -122,6 +137,7 @@ export const FileTreeSidebar = ({
       return (
         <div key={node.path}>
           <button
+            type="button"
             onClick={() => onToggleFolder(node.path)}
             className={css({
               width: '100%',
@@ -146,7 +162,7 @@ export const FileTreeSidebar = ({
             <Folder size={14} />
             <span>{node.name}</span>
           </button>
-          {!isCollapsed && node.children.map(child => renderTreeNode(child, depth + 1))}
+          {!isCollapsed && node.children.map((child) => renderTreeNode(child, depth + 1))}
         </div>
       )
     }
@@ -175,6 +191,7 @@ export const FileTreeSidebar = ({
 
     return (
       <button
+        type="button"
         key={node.path}
         onClick={handleSingleClick}
         onDoubleClick={handleDoubleClick}
@@ -183,7 +200,11 @@ export const FileTreeSidebar = ({
           textAlign: 'left',
           padding: '6px 12px',
           paddingLeft: `${12 + depth * 16}px`,
-          backgroundColor: isExpanded ? '#581c87' : isSelected ? '#27272a' : 'transparent',
+          backgroundColor: isExpanded
+            ? '#581c87'
+            : isSelected
+              ? '#27272a'
+              : 'transparent',
           border: 'none',
           color: isExpanded ? '#e9d5ff' : isSelected ? '#fafafa' : '#a1a1aa',
           fontSize: '13px',
@@ -199,11 +220,13 @@ export const FileTreeSidebar = ({
         })}
       >
         <FileIcon size={14} className={css({ color: colors.icon })} />
-        <span className={css({
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        })}>
+        <span
+          className={css({
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          })}
+        >
           {node.name}
         </span>
       </button>
@@ -211,35 +234,46 @@ export const FileTreeSidebar = ({
   }
 
   return (
-    <div className={css({
-      width: '280px',
-      borderRight: '1px solid #27272a',
-      backgroundColor: '#18181b',
-      display: 'flex',
-      flexDirection: 'column',
-    })}>
+    <div
+      className={css({
+        width: '280px',
+        borderRight: '1px solid #27272a',
+        backgroundColor: '#18181b',
+        display: 'flex',
+        flexDirection: 'column',
+      })}
+    >
       {/* Search bar */}
-      <div className={css({
-        padding: '12px',
-        borderBottom: '1px solid #27272a',
-      })}>
-        <div className={css({
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        })}>
-          <div className={css({
-            flex: 1,
+      <div
+        className={css({
+          padding: '12px',
+          borderBottom: '1px solid #27272a',
+        })}
+      >
+        <div
+          className={css({
             position: 'relative',
-          })}>
-            <Search className={css({
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#71717a',
-            })} size={16} />
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          })}
+        >
+          <div
+            className={css({
+              flex: 1,
+              position: 'relative',
+            })}
+          >
+            <Search
+              className={css({
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#71717a',
+              })}
+              size={16}
+            />
             <input
               type="text"
               placeholder="Filter files..."
@@ -265,6 +299,7 @@ export const FileTreeSidebar = ({
             />
           </div>
           <button
+            type="button"
             onClick={onCollapse}
             className={css({
               backgroundColor: '#27272a',
@@ -287,12 +322,14 @@ export const FileTreeSidebar = ({
       </div>
 
       {/* File Tree */}
-      <div className={css({
-        flex: 1,
-        overflowY: 'auto',
-        padding: '8px 0',
-      })}>
-        {fileTree.children.map(child => renderTreeNode(child, 0))}
+      <div
+        className={css({
+          flex: 1,
+          overflowY: 'auto',
+          padding: '8px 0',
+        })}
+      >
+        {fileTree.children.map((child) => renderTreeNode(child, 0))}
       </div>
     </div>
   )

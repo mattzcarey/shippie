@@ -1,7 +1,7 @@
 import open from 'open'
+import { getGitRoot } from '../common/git/getChangedFilesNames'
 import type { StackArgs } from '../common/types'
 import { logger } from '../common/utils/logger'
-import { getGitRoot } from '../common/git/getChangedFilesNames'
 import { createStackServer } from './server'
 
 export const ui = async (argv: StackArgs): Promise<void> => {

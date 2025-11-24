@@ -1,6 +1,6 @@
-import type { StackCommit } from '../types'
 import { ChevronDown, GitBranch } from 'lucide-react'
 import { useState } from 'react'
+import type { StackCommit } from '../types'
 
 type CommitSidebarProps = {
   commits: StackCommit[]
@@ -36,6 +36,7 @@ export const CommitSidebar = ({
       <div className="p-3 border-b border-zinc-800">
         <div className="relative">
           <button
+            type="button"
             onClick={() => setShowBranchMenu(!showBranchMenu)}
             className="w-full flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700 text-xs transition-colors"
           >
@@ -51,11 +52,17 @@ export const CommitSidebar = ({
               <div className="p-2 border-b border-zinc-800 text-[10px] text-zinc-500 uppercase tracking-wider">
                 Switch Branch
               </div>
-              <button className="w-full text-left px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-800 flex items-center gap-2">
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-800 flex items-center gap-2"
+              >
                 <GitBranch className="w-3 h-3" />
                 <span>main</span>
               </button>
-              <button className="w-full text-left px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-800 flex items-center gap-2">
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-800 flex items-center gap-2"
+              >
                 <GitBranch className="w-3 h-3" />
                 <span>develop</span>
               </button>
@@ -76,18 +83,18 @@ export const CommitSidebar = ({
 
           return (
             <button
+              type="button"
               key={commit.commit.hash}
               onClick={() => onToggle(commit.commit.hash)}
               className={`w-full text-left p-2 border-b border-zinc-800/50 transition-all
-                ${isSelected
-                  ? 'bg-zinc-800/80'
-                  : 'hover:bg-zinc-800/40'
-                }`}
+                ${isSelected ? 'bg-zinc-800/80' : 'hover:bg-zinc-800/40'}`}
             >
               <div className="flex items-start gap-2">
                 {/* Selection indicator */}
                 {isSelected ? (
-                  <div className={`flex-shrink-0 text-[9px] font-bold border px-1 py-0.5 ${colorClass} mt-0.5`}>
+                  <div
+                    className={`flex-shrink-0 text-[9px] font-bold border px-1 py-0.5 ${colorClass} mt-0.5`}
+                  >
                     #{index + 1}
                   </div>
                 ) : (
@@ -96,10 +103,14 @@ export const CommitSidebar = ({
 
                 <div className="flex-1 min-w-0">
                   {/* Hash & Message */}
-                  <div className={`text-[11px] leading-tight ${
-                    isSelected ? 'text-zinc-200' : 'text-zinc-500'
-                  }`}>
-                    <span className={`${isSelected ? colorClass.split(' ')[0] : 'text-zinc-600'} mr-1`}>
+                  <div
+                    className={`text-[11px] leading-tight ${
+                      isSelected ? 'text-zinc-200' : 'text-zinc-500'
+                    }`}
+                  >
+                    <span
+                      className={`${isSelected ? colorClass.split(' ')[0] : 'text-zinc-600'} mr-1`}
+                    >
                       {commit.commit.shortHash}
                     </span>
                     {commit.commit.message.slice(0, 40)}
@@ -121,10 +132,16 @@ export const CommitSidebar = ({
 
       {/* Footer Actions */}
       <div className="p-2 border-t border-zinc-800 space-y-1.5">
-        <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-zinc-950 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors">
+        <button
+          type="button"
+          className="w-full bg-emerald-600 hover:bg-emerald-500 text-zinc-950 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
+        >
           Apply Restack
         </button>
-        <button className="w-full border border-zinc-700 hover:bg-zinc-800 text-zinc-400 px-2 py-1 text-[9px] uppercase tracking-wider transition-colors">
+        <button
+          type="button"
+          className="w-full border border-zinc-700 hover:bg-zinc-800 text-zinc-400 px-2 py-1 text-[9px] uppercase tracking-wider transition-colors"
+        >
           Reset
         </button>
       </div>
