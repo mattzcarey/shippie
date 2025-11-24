@@ -15,28 +15,30 @@ const execAsync = promisify(exec);
 
 // Helper to find the UI assets directory
 const findUIAssetsPath = (): string => {
-  // When running from source (development)
-  const devPath = "./src/ui/ui/dist";
-  if (existsSync(devPath)) {
-    return devPath;
+  const cwd = process.cwd();
+
+  const pathsToTry = [
+    // When running from source at project root
+    join(cwd, "src/ui/web/dist"),
+    // When running from src/ui/web directory
+    join(cwd, "dist"),
+    // When running from published npm package
+    join(dirname(fileURLToPath(import.meta.url)), "../ui-assets"),
+    // Fallback for different structures
+    join(cwd, "dist/ui-assets"),
+  ];
+
+  for (const absolutePath of pathsToTry) {
+    if (existsSync(absolutePath)) {
+      logger.debug(`Found UI assets at: ${absolutePath}`);
+      return absolutePath;
+    }
   }
 
-  // When running from published npm package
-  // import.meta.url will be something like: file:///path/to/node_modules/shippie/dist/ui/server.js
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  const distPath = join(currentDir, "../ui-assets");
-  if (existsSync(distPath)) {
-    return distPath;
-  }
-
-  // Fallback for different structures
-  const fallbackPath = "./dist/ui-assets";
-  if (existsSync(fallbackPath)) {
-    return fallbackPath;
-  }
-
-  logger.warn("Could not find UI assets, using default path");
-  return devPath;
+  logger.warn("Could not find UI assets in any known location");
+  logger.warn(`Tried: ${pathsToTry.join(", ")}`);
+  logger.warn(`Current working directory: ${cwd}`);
+  return pathsToTry[0]; // fallback to first option
 };
 
 export type ServerConfig = {
@@ -159,12 +161,34 @@ export const createStackServer = async (config: ServerConfig) => {
 
       logger.debug(`Fetching file content: ${commitHash}:${filePath}`);
 
-      const { stdout: content } = await execAsync(
-        `git show ${commitHash}:"${filePath}"`,
-        { cwd: config.gitRoot, maxBuffer: 10 * 1024 * 1024 }
-      );
-
-      return c.json({ content });
+      // Try to fetch from the current commit first
+      try {
+        const { stdout: content } = await execAsync(
+          `git show ${commitHash}:"${filePath}"`,
+          { cwd: config.gitRoot, maxBuffer: 10 * 1024 * 1024 }
+        );
+        return c.json({ content });
+      } catch (error) {
+        // If the file doesn't exist at this commit, try the parent commit
+        // This handles the case where the file was deleted in this commit
+        logger.debug(
+          `File not found at ${commitHash}, trying parent commit (${commitHash}^)`
+        );
+        try {
+          const { stdout: content } = await execAsync(
+            `git show ${commitHash}^:"${filePath}"`,
+            { cwd: config.gitRoot, maxBuffer: 10 * 1024 * 1024 }
+          );
+          return c.json({ content, deletedInCommit: true });
+        } catch (parentError) {
+          // If it still fails, throw the original error
+          logger.error(
+            "Failed to get file content from both commit and parent:",
+            error
+          );
+          throw error;
+        }
+      }
     } catch (error) {
       logger.error("Failed to get file content:", error);
       const message =

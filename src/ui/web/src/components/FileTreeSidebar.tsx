@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react'
 import { useStyletron } from 'baseui'
 import { ChevronLeft, ChevronDown, ChevronRight, Folder, FileIcon, Search } from 'lucide-react'
 import type { StackCommit } from '../types'
+import { getChangeTypeColors } from '../theme/colors'
 
 type FileTreeSidebarProps = {
   commit: StackCommit | undefined
@@ -75,6 +76,17 @@ export const FileTreeSidebar = ({
 
   const files = useMemo(() => commit?.commit.filesChanged || [], [commit?.commit.filesChanged])
   const fileTree = useMemo(() => buildFileTree(files), [files])
+
+  // Create a map of file paths to their change types
+  const fileChangeTypes = useMemo(() => {
+    const map = new Map<string, 'added' | 'modified' | 'deleted' | 'renamed'>()
+    if (commit) {
+      for (const change of commit.changes) {
+        map.set(change.fileName, change.changeType)
+      }
+    }
+    return map
+  }, [commit])
 
   const filteredFiles = useMemo(() => {
     if (!searchQuery) return files
@@ -158,6 +170,9 @@ export const FileTreeSidebar = ({
       onSelectFile(node.path)
     }
 
+    const changeType = fileChangeTypes.get(node.path) || 'modified'
+    const colors = getChangeTypeColors(changeType)
+
     return (
       <button
         key={node.path}
@@ -183,7 +198,7 @@ export const FileTreeSidebar = ({
           },
         })}
       >
-        <FileIcon size={14} className={css({ color: '#10b981' })} />
+        <FileIcon size={14} className={css({ color: colors.icon })} />
         <span className={css({
           overflow: 'hidden',
           textOverflow: 'ellipsis',

@@ -8,10 +8,14 @@ type EditorViewProps = {
   fileContent: string
   hunks: Hunk[]
   height?: string
+  deletedFile?: boolean
 }
 
 // Build unified diff content with both additions and deletions
 const buildUnifiedDiff = (fileContent: string, hunks: Hunk[]): { content: string; decorations: any[] } => {
+  if (!fileContent) {
+    return { content: '', decorations: [] }
+  }
   const fileLines = fileContent.split('\n')
   const result: string[] = []
   const decorations: any[] = []
@@ -113,7 +117,7 @@ const getLanguageFromFileName = (fileName: string): string => {
   return langMap[ext || ''] || 'typescript'
 }
 
-export const EditorView = ({ fileName, fileContent, hunks }: EditorViewProps) => {
+export const EditorView = ({ fileName, fileContent, hunks, deletedFile = false }: EditorViewProps) => {
   const [css] = useStyletron()
 
   const { content, decorations } = useMemo(() => {
@@ -130,7 +134,21 @@ export const EditorView = ({ fileName, fileContent, hunks }: EditorViewProps) =>
       backgroundColor: '#18181b',
       height: 'calc(83vh)',
       maxHeight: 'calc(83vh)',
+      position: 'relative',
     })}>
+      {deletedFile && (
+        <div className={css({
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(127, 29, 29, 0.15)',
+          pointerEvents: 'none',
+          zIndex: 1,
+          border: '2px solid rgba(239, 68, 68, 0.3)',
+        })} />
+      )}
       <style>{`
         .added-line {
           background-color: #052e16 !important;

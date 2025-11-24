@@ -4,6 +4,7 @@ import { ChevronRight, ChevronDown, Maximize2, Minimize2, Loader2 } from 'lucide
 import type { StackCommit } from '../types'
 import { EditorView, PatchView } from './code'
 import { useFileContent } from '../hooks/useFileContent'
+import { ChangeTypeBadge } from './ChangeTypeBadge'
 
 type CodeViewProps = {
   commit: StackCommit | undefined
@@ -174,13 +175,7 @@ export const CodeView = ({
                   >
                     {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                     <span className={css({ fontWeight: 600 })}>{fileChange.fileName}</span>
-                    <span className={css({
-                      fontSize: '11px',
-                      color: '#71717a',
-                      textTransform: 'uppercase',
-                    })}>
-                      {fileChange.changeType}
-                    </span>
+                    <ChangeTypeBadge changeType={fileChange.changeType} />
                   </button>
                 )}
                 {/* In expanded view, show file name - entire bar is clickable */}
@@ -195,13 +190,7 @@ export const CodeView = ({
                     fontFamily: 'inherit',
                   })}>
                     <span className={css({ fontWeight: 600, color: '#fafafa' })}>{fileChange.fileName}</span>
-                    <span className={css({
-                      fontSize: '11px',
-                      color: '#71717a',
-                      textTransform: 'uppercase',
-                    })}>
-                      {fileChange.changeType}
-                    </span>
+                    <ChangeTypeBadge changeType={fileChange.changeType} />
                   </div>
                 )}
                 {/* Expand/Minimize button */}
@@ -271,11 +260,12 @@ export const CodeView = ({
                       })}>
                         Failed to load file content: {String(fileContentError)}
                       </div>
-                    ) : fileContent ? (
+                    ) : fileContent && fileContent.content ? (
                       <EditorView
                         fileName={fileChange.fileName}
-                        fileContent={fileContent}
+                        fileContent={fileContent.content}
                         hunks={fileChange.hunks}
+                        deletedFile={fileContent.deletedInCommit}
                       />
                     ) : (
                       <div className={css({

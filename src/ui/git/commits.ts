@@ -79,14 +79,24 @@ export const getCommitHistory = async (
       const shortHash = hash.substring(0, 7);
 
       // Get files changed in this commit
+      // Use -M to detect renames, --name-status to see rename info
       const { stdout: filesOutput } = await execAsync(
-        `git diff-tree --no-commit-id --name-only -r ${hash}`,
+        `git diff-tree --no-commit-id --name-status -r -M ${hash}`,
         { cwd: gitRoot }
       );
-      const filesChanged = filesOutput
-        .trim()
-        .split("\n")
-        .filter((f) => f.length > 0);
+
+      // Parse the output which is in format: "STATUS\tFILE" or "R100\tOLDNAME\tNEWNAME" for renames
+      const filesChanged: string[] = [];
+      for (const line of filesOutput.trim().split("\n").filter(f => f.length > 0)) {
+        const parts = line.split("\t");
+        if (parts[0].startsWith("R")) {
+          // Rename: use the new filename (last part)
+          filesChanged.push(parts[2]);
+        } else {
+          // Other status (A, M, D): use the filename (second part)
+          filesChanged.push(parts[1]);
+        }
+      }
 
       // Get detailed diff for this commit
       const changes = await getCommitDiff(gitRoot, hash);
@@ -126,8 +136,9 @@ const getCommitDiff = async (
 ): Promise<FileChange[]> => {
   try {
     // Get unified diff with 3 lines of context
+    // Use -M to detect renames
     const { stdout: diffOutput } = await execAsync(
-      `git show ${commitHash} --unified=3 --format=`,
+      `git show ${commitHash} --unified=3 --format= -M`,
       { cwd: gitRoot, maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
     );
 
@@ -191,7 +202,13 @@ const parseDiff = (diffOutput: string): FileChange[] => {
       currentFile.changeType = "deleted";
     } else if (line.startsWith("rename from")) {
       currentFile.changeType = "renamed";
-      currentFile.oldPath = line.replace("rename from ", "");
+      currentFile.oldPath = line.replace("rename from ", "").trim();
+    } else if (line.startsWith("rename to")) {
+      // This line comes after "rename from", just confirms the rename
+      // The fileName is already set from the b/newname in the diff header
+      if (currentFile) {
+        currentFile.changeType = "renamed";
+      }
     }
 
     // Hunk header: @@ -oldStart,oldLines +newStart,newLines @@
