@@ -50,6 +50,7 @@
         "node": ">=22.19.0"
     },
     "dependencies": {
+        "@flue/github": "^1.0.0-beta.1",
         "@flue/runtime": "^1.0.0-beta.1",
         "octokit": "^3.1.0",
         "picomatch": "^4.0.2",

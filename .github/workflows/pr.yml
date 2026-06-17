@@ -51,6 +51,6 @@ jobs:
         uses: ./
         continue-on-error: true
         with:
-          MODEL: openai/gpt-5-nano
+          MODEL: openai/gpt-5.4-nano
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

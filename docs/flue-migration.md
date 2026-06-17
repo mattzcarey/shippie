@@ -301,6 +301,19 @@ review more accurately — the integration is solid regardless.
 choices, not blockers: pick the default/dogfood model, optionally add a `@flue/github` live-review channel,
 and merge PR #470.
 
+### 2026-06-17 — Live `@shippie` channel + dogfood model `gpt-5.4-nano` (maintainer request)
+
+- **GitHub channel (webhook / server mode):** added `src/channels/github.ts` (`@flue/github`
+  `createGitHubChannel`) + `src/agents/mention.ts`. Commenting `@shippie …` on an issue/PR (verified
+  webhook) dispatches to the `mention` agent, which fetches the PR diff via Octokit when asked to review and
+  replies with a comment. Served at `POST /channels/github/webhook` on the built server; needs
+  `GITHUB_WEBHOOK_SECRET` + `GITHUB_TOKEN`. Bots (including itself) are ignored. Added dep `@flue/github`.
+  This is the optional second deployment mode alongside the one-shot CI review. Documented in
+  `docs/tag-shippie.md` (+ README + `.env.example`).
+- **Dogfood self-review model → `openai/gpt-5.4-nano`** (valid in pi's catalog; replaces `gpt-5-nano`).
+- Verified: `flue build` discovers agents (`reviewer`, `mention`) + workflow (`review`) + channel (`github`);
+  `npm run check` / `check:types` / `build` / `test` (19/19) all green.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,
