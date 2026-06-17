@@ -271,6 +271,20 @@ stack cannot break `flue run review` — confirmed by re-running it green after 
 - Verified: biome/tsc/tests/build all green; `shippie --help` works; `node bin/shippie.mjs review` runs an
   end-to-end staged review locally (demoed via Cloudflare Workers AI).
 
+### 2026-06-17 — PR #470 opened; CI validated on a real PR; dogfood model fix
+
+- Opened **PR #470** (`feat/flue-migration`) with the full migration. On the real PR, **all checks pass** —
+  `build-and-test` (npm: `check` / `check:types` / `build` / `test` 19/19), CodeQL, snyk, PR-title validation.
+  This confirms the npm/Node migration works in GitHub Actions.
+- **Dogfood model finding:** `openai/gpt-5.1-nano` is **rejected by pi-ai's catalog** ("Unknown model
+  specifier") so the self-review step errored (kept green by `continue-on-error`, posted no comment). pi's
+  catalog has `gpt-5-nano`, `gpt-5.1`, `gpt-5.4-mini` (no `gpt-5.1-nano`); unknown built-in ids are
+  hard-rejected, not passed through. Switched the dogfood to **`openai/gpt-5-nano`** — easy to change.
+- **Maintainer decisions resolved** (done above): telemetry re-added (opt-out), `npx shippie` CLI bin added.
+- Refreshed `todo.md` for the flue architecture.
+- Still needs a human: confirm the dogfood/default model (gpt-5-nano vs other) and that `OPENAI_API_KEY` is
+  set as a repo secret so the self-review actually posts; optional `@flue/github` live-review channel.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,

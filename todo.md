@@ -1,22 +1,25 @@
 TO THE AI.
 
-This package is a code review tool. It is built to be ran with bun as a cli tools primarily during a CI pipeline.
+Shippie is a code-review agent built on [flue](https://github.com/withastro/flue), run with
+Node + npm. It runs the agent loop on "pi" (flue's built-in tools), reviews PRs in CI via the
+GitHub Action and staged changes locally (`npx shippie review`), and deploys anywhere flue deploys.
 
 Ethos of the package:
 
-- Beautiful cli tool with typescript and bun
-- Works well in Github Actions
-- Abstracts the model being used with ai sdk
-- Functions as a human code reviewer would using a small set of tools which are highly optimised for code review
-- Used Model Context Protocol (MCP) client for users to plug in external tools such as browser use, infrastructure deployments, observability monitoring.
+- A headless flue agent that reviews code using flue's built-in ("pi") tools plus `suggest_change`
+- Works natively in GitHub Actions and Node
+- Model-agnostic via flue model strings (anthropic / openai / openrouter / Cloudflare Workers AI)
+- Acts as a Model Context Protocol (MCP) client (remote HTTP/SSE) configured via the Action input
+- Reads `AGENTS.md` / `CLAUDE.md` and `.agents/skills/` for project context
 
-Go through these todos, one by one. When they are complete add a ✅ to the left of the todo. If you fail to do them add a ❌ to the left of the todo.
+Go through these todos, one by one. When they are complete add a ✅ to the left of the todo. If you
+fail to do them add a ❌ to the left of the todo.
 
 TODO:
 
-- context window management - ie we should know if we are getting dangerously close to the end and we should automatically try and compress the context window before resuming the review.
-- landing page
-- premium mcp servers
-- better docs
-- telemetry on errors
-- telemetry on ai usage
+- Optional `@flue/github` channel: a webhook server mode for live "@shippie review" comments alongside the one-shot CI workflow.
+- Large-diff handling: tune flue context compaction so very large PRs compress context before resuming the review.
+- Improve inline-comment reliability on smaller / open models (e.g. Cloudflare Workers AI).
+- Re-create review eval/scenario tests on the flue workflow (the old `src/specs` scenarios were removed).
+- Landing page and better docs.
+- Telemetry on errors and on AI usage (basic anonymous `review_started` telemetry is already in place).
