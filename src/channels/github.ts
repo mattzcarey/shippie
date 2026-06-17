@@ -6,7 +6,7 @@ import mention from '../agents/mention'
 
 /**
  * GitHub channel — the webhook (server) deployment mode. Lets people summon
- * Shippie by commenting `@shippie ...` on an issue or pull request. Verified
+ * Shippie by commenting `/shippie ...` on an issue or pull request. Verified
  * deliveries are dispatched to the `mention` agent, which replies via Octokit.
  *
  * Served at `POST /channels/github/webhook` on the built server. Requires
@@ -14,7 +14,7 @@ import mention from '../agents/mention'
  * This is separate from the one-shot CI review (action.yml / `flue run review`).
  */
 
-const MENTION = '@shippie'
+const MENTION = '/shippie'
 
 export interface IssueRef {
   owner: string

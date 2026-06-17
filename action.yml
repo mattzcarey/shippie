@@ -48,6 +48,15 @@ inputs:
     description: "Send anonymous usage telemetry. Set to 'false' to opt out."
     required: false
     default: "true"
+  PR_NUMBER:
+    description: "Pull request number. Defaults to the pull_request event; pass explicitly for comment-triggered runs."
+    required: false
+  BASE_SHA:
+    description: "Base commit SHA to diff against. Defaults to the pull_request event."
+    required: false
+  HEAD_SHA:
+    description: "Head commit SHA to diff. Defaults to the pull_request event."
+    required: false
   GITHUB_TOKEN:
     description: "GitHub token used to post review comments"
     required: true
@@ -75,9 +84,9 @@ runs:
         CLOUDFLARE_GATEWAY_ID: ${{ inputs.CLOUDFLARE_GATEWAY_ID }}
         # GitHub commenting + PR identity (read by resolveReviewConfig)
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        SHIPPIE_PR_NUMBER: ${{ github.event.pull_request.number }}
-        BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        SHIPPIE_PR_NUMBER: ${{ inputs.PR_NUMBER || github.event.pull_request.number }}
+        BASE_SHA: ${{ inputs.BASE_SHA || github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ inputs.HEAD_SHA || github.event.pull_request.head.sha }}
         # Review configuration
         SHIPPIE_MODEL: ${{ inputs.MODEL }}
         SHIPPIE_REVIEW_LANGUAGE: ${{ inputs.REVIEW_LANGUAGE }}

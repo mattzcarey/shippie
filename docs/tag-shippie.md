@@ -1,29 +1,91 @@
-# Tagging Shippie (live reviews via `@shippie`)
+# Run Shippie on demand (`/shippie` on a PR)
 
-Shippie can run in two modes:
+Comment `/shippie` on a pull request to run Shippie on demand. There are two ways to wire it up:
 
-| Mode | Trigger | Deployment | Use |
-| --- | --- | --- | --- |
-| **One-shot review** | every PR (CI) or `npx shippie review` | GitHub Action / `flue run` — no server | Automatic review on each pull request |
-| **Live channel** | someone comments `@shippie …` | a deployed Flue **server** with a GitHub webhook | On-demand reviews and questions |
+| Mode | How | Hosting |
+| --- | --- | --- |
+| **Actions on comment** (recommended) | a GitHub Actions workflow triggered by the comment | none — runs in CI |
+| **Webhook channel** | a deployed Flue server with a GitHub webhook | a hosted server |
 
-This page covers the **live channel**. For the per-PR CI review see [setup.md](setup.md).
+Both also coexist with the automatic per-PR review (see [setup.md](setup.md)).
 
-## How it works
+> We use `/shippie` (a command), not `@shippie` (which would imply a real GitHub user account).
 
-Shippie ships a GitHub **channel** (`src/channels/github.ts`, built on [`@flue/github`](https://github.com/withastro/flue)). When deployed as a server it serves a webhook at:
+---
 
+## Actions on comment (no server) — recommended
+
+Add a workflow that runs when a PR comment contains `/shippie`. It resolves the PR's refs and runs the
+Shippie action — no hosting, just Actions minutes.
+
+```yaml
+# .github/workflows/shippie-mention.yml
+name: Shippie /shippie
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  shippie:
+    if: >-
+      ${{ github.event.issue.pull_request &&
+          github.event.comment.user.type != 'Bot' &&
+          contains(github.event.comment.body, '/shippie') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR refs
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          data=$(gh pr view "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" --json headRefOid,baseRefOid)
+          echo "head_sha=$(echo "$data" | jq -r .headRefOid)" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$(echo "$data" | jq -r .baseRefOid)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+          fetch-depth: 0
+
+      - name: Ensure base commit is present
+        run: git fetch --no-tags --depth=1 origin "${{ steps.pr.outputs.base_sha }}" || true
+
+      - name: Run Shippie 🚢
+        uses: mattzcarey/shippie@v0
+        with:
+          MODEL: anthropic/claude-sonnet-4-6
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
 ```
-POST https://<your-host>/channels/github/webhook
-```
 
-When someone comments `@shippie …` on an issue or pull request, the webhook verifies the
-delivery, then dispatches the request to the `mention` agent, which reads the comment, fetches
-the PR diff if needed, and replies with a single comment.
+Then comment `/shippie review` on any pull request. This runs the same review as the per-PR action
+(inline comments + a summary). This repo dogfoods it in `.github/workflows/shippie-mention.yml`.
 
-## Deploy the server
+> The Actions-on-comment path runs a **review**. For free-form questions (`/shippie does X handle Y?`),
+> use the webhook channel below, whose agent can answer as well as review.
 
-Shippie is a Flue project, so it deploys anywhere Flue does (Node, Cloudflare, Render, Fly, GitLab CI…). The simplest is Node:
+---
+
+## Webhook channel (deploy a server)
+
+Shippie also ships a GitHub **channel** (`src/channels/github.ts`, built on
+[`@flue/github`](https://github.com/withastro/flue)). Deployed as a server it serves a webhook at
+`POST https://<your-host>/channels/github/webhook`; a `/shippie` comment is verified, dispatched to the
+`mention` agent, which fetches the PR diff if needed and replies. Use this when you want real-time
+responses, free-form Q&A, or to run outside GitHub Actions.
+
+### Deploy
+
+Shippie deploys anywhere Flue does (Node, Cloudflare, Render, Fly…). The simplest is Node:
 
 ```bash
 npm install
@@ -31,40 +93,23 @@ npm run build            # -> dist/server.mjs
 node dist/server.mjs     # listens on $PORT (default 3000)
 ```
 
-Set these environment variables on the server:
+Set on the server:
 
 | Variable | Purpose |
 | --- | --- |
 | `GITHUB_WEBHOOK_SECRET` | **Required.** Verifies inbound webhook deliveries. |
-| `GITHUB_TOKEN` | **Required.** Authenticates Shippie's reply comments (and diff fetches). |
+| `GITHUB_TOKEN` | **Required.** Authenticates Shippie's reply comments + diff fetches. |
 | `SHIPPIE_MODEL` | Model specifier (default `anthropic/claude-sonnet-4-6`). |
-| *provider key* | e.g. `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / Cloudflare creds — see [ai-provider-config.md](ai-provider-config.md). |
+| *provider key* | e.g. `ANTHROPIC_API_KEY` — see [ai-provider-config.md](ai-provider-config.md). |
 
-## Register the GitHub webhook
+### Register the webhook
 
-In your repo (or org) **Settings → Webhooks → Add webhook**:
+Repo (or org) **Settings → Webhooks → Add webhook**:
 
 - **Payload URL:** `https://<your-host>/channels/github/webhook`
 - **Content type:** `application/json`
 - **Secret:** the same value as `GITHUB_WEBHOOK_SECRET`
-- **Events:** select **Issue comments** and **Pull request review comments**
+- **Events:** **Issue comments** and **Pull request review comments**
 
-## Use it
-
-Comment on any issue or pull request:
-
-```text
-@shippie review
-```
-
-or ask a question:
-
-```text
-@shippie does this change handle the empty-input case?
-```
-
-Shippie replies as a comment. Notes:
-
-- Only comments containing `@shippie` trigger it; it ignores comments from bots (including itself).
-- On a pull request, `@shippie review` fetches the diff via the GitHub API and posts a concise review.
-- The channel is webhook-driven and stateless; GitHub expects a `2xx` within ~10s, so Shippie admits the work and replies asynchronously.
+Then comment `/shippie review` (or ask a question) on any issue or pull request. Shippie ignores comments
+from bots (including itself), and the channel replies asynchronously (GitHub expects a `2xx` within ~10s).

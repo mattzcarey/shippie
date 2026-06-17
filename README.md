@@ -74,9 +74,9 @@ Or via the package script:
 npm run review
 ```
 
-### Tag `@shippie` (live reviews)
+### Run on demand with `/shippie`
 
-Deploy shippie as a server (anywhere flue deploys) and people can summon it by commenting `@shippie review` — or asking a question — on any issue or pull request. See [Tagging Shippie](docs/tag-shippie.md).
+Comment `/shippie review` on a pull request to run shippie on demand — either via a GitHub Actions workflow (no server) or a deployed webhook channel. See [Run Shippie on demand](docs/tag-shippie.md).
 
 ## Setup Instructions 💫
 
@@ -90,7 +90,7 @@ See the [setup instructions](docs/setup.md) for more docs on how to set up shipp
 - [Model Context Protocol (MCP)](docs/mcp.md) - Give shippie access to external tools
 - [Rules Files](docs/rules-files.md) - Inject project context via `AGENTS.md` / `CLAUDE.md` and Agent Skills
 - [Subagent Tool](docs/subagent-tool.md) - Delegate work to flue subagents with the `task` tool
-- [Tag @shippie](docs/tag-shippie.md) - Live, on-demand reviews by commenting `@shippie` (webhook channel)
+- [On-demand /shippie](docs/tag-shippie.md) - Run shippie by commenting `/shippie` (Actions or webhook)
 
 ## Development 🔧
 

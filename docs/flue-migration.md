@@ -314,6 +314,19 @@ and merge PR #470.
 - Verified: `flue build` discovers agents (`reviewer`, `mention`) + workflow (`review`) + channel (`github`);
   `npm run check` / `check:types` / `build` / `test` (19/19) all green.
 
+### 2026-06-17 — `/shippie` on-demand trigger (Actions, no server) + rename `@` → `/`
+
+- Trigger is now **`/shippie`** (a command), not `@shippie` (which would imply a real GitHub user account).
+  Updated the channel (`src/channels/github.ts`), the `mention` agent, and docs.
+- Added **Actions-on-comment** mode (no server): `.github/workflows/shippie-mention.yml` runs the action when
+  a PR comment contains `/shippie` — resolves PR refs via `gh`, checks out `refs/pull/N/head`, fetches the
+  base commit, then runs the review. This is the recommended way to use `/shippie` without hosting; the
+  webhook channel remains for deploy-anywhere / real-time / Q&A use.
+- `action.yml` gained `PR_NUMBER` / `BASE_SHA` / `HEAD_SHA` inputs (default to the `pull_request` event,
+  passed explicitly for comment-triggered runs).
+- `docs/tag-shippie.md` rewritten (Actions-first) and README updated.
+- Verified: `npm run check` / `check:types` / `build` / `test` (19/19) green.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,
