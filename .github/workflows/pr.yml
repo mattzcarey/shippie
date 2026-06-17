@@ -21,7 +21,9 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm ci
+        # npm install (not npm ci): the lockfile is generated on macOS and lacks
+        # Linux-only optional deps (@emnapi/*), which makes `npm ci` EUSAGE here.
+        run: npm install --no-audit --no-fund
 
       - name: Lint check
         run: npm run check
@@ -51,6 +53,7 @@ jobs:
         uses: ./
         continue-on-error: true
         with:
-          MODEL: openai/gpt-5.4-nano
+          MODEL: openai/gpt-5.5
+          THINKING_LEVEL: high
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

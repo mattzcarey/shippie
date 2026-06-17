@@ -336,6 +336,19 @@ Pushed as `e7aec8e`. (Note: the repo's default-setup **CodeQL** aggregate check 
 `Analyze (javascript)`/`Analyze (actions)` jobs pass — that's the repo's existing CodeQL setup, unrelated to
 this migration.)
 
+### 2026-06-17 — CI fix (npm install), dogfood → gpt-5.5, reporter fallback
+
+- **CI root cause:** `npm ci` failed on Linux CI ("Missing `@emnapi/*` from lock file") even though it passes
+  locally on macOS — the lockfile is generated on macOS and omits Linux-only optional deps (a known
+  cross-platform npm lockfile quirk, not a stale lock). Switched `pr.yml` + `release-package.yml` from
+  `npm ci` to **`npm install`** (what `action.yml` already does, and which works in this CI). Kept
+  `package-lock.json` for reproducibility hints.
+- **Dogfood self-review → `openai/gpt-5.5` + `thinkingLevel: high`** (was gpt-5.4-nano) for genuinely good
+  reviews. The `review` job runs once `build-and-test` passes (it `needs:` it).
+- **Acted on the self-review's feedback:** `createReporter` now degrades to local file output (with a
+  visible stderr warning) when the github platform has no PR context, instead of throwing.
+- Verified locally: `npm run check` / `check:types` / `build` / `test` (19/19) green.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,

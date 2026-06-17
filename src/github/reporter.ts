@@ -121,5 +121,15 @@ const createLocalReporter = (cfg: ReviewConfig): Reporter => {
   }
 }
 
-export const createReporter = (cfg: ReviewConfig): Reporter =>
-  cfg.platform === 'github' ? createGithubReporter(cfg) : createLocalReporter(cfg)
+export const createReporter = (cfg: ReviewConfig): Reporter => {
+  // On the github platform without PR context (owner/repo/prNumber), degrade to
+  // local file output with a visible warning rather than crashing the review.
+  if (cfg.platform === 'github' && !cfg.github) {
+    console.error(
+      '[shippie] platform is "github" but no PR context was found (owner/repo/prNumber). ' +
+        'Falling back to local file output. Set GITHUB_TOKEN + PR metadata to post on the PR.'
+    )
+    return createLocalReporter(cfg)
+  }
+  return cfg.platform === 'github' ? createGithubReporter(cfg) : createLocalReporter(cfg)
+}
