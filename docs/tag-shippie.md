@@ -35,7 +35,8 @@ jobs:
     if: >-
       ${{ github.event.issue.pull_request &&
           github.event.comment.user.type != 'Bot' &&
-          contains(github.event.comment.body, '/shippie') }}
+          contains(github.event.comment.body, '/shippie') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) }}
     runs-on: ubuntu-latest
     steps:
       - name: Resolve PR refs
@@ -69,6 +70,11 @@ jobs:
 
 Then comment `/shippie review` on any pull request. This runs the same review as the per-PR action
 (inline comments + a summary). This repo dogfoods it in `.github/workflows/shippie-mention.yml`.
+
+> **Security:** the `author_association` gate (`OWNER`/`MEMBER`/`COLLABORATOR`) is important. This job
+> runs with write permissions and secrets and checks out PR head code, so without the gate a fork author
+> could trigger it on malicious code (a "pwn request"). Keep the gate; only trusted collaborators can run
+> `/shippie`.
 
 > The Actions-on-comment path runs a **review**. For free-form questions (`/shippie does X handle Y?`),
 > use the webhook channel below, whose agent can answer as well as review.

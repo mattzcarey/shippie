@@ -13,11 +13,15 @@ permissions:
 
 jobs:
   shippie:
-    # Only PR comments that contain "/shippie" and are not from a bot.
+    # Only PR comments that contain "/shippie", from a non-bot user who is a
+    # trusted collaborator. The author_association gate is required: this job
+    # has write permissions + secrets and checks out PR head code, so allowing
+    # arbitrary (fork) authors to trigger it would be a "pwn request" risk.
     if: >-
       ${{ github.event.issue.pull_request &&
           github.event.comment.user.type != 'Bot' &&
-          contains(github.event.comment.body, '/shippie') }}
+          contains(github.event.comment.body, '/shippie') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) }}
     runs-on: ubuntu-latest
     steps:
       - name: Resolve PR refs

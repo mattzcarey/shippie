@@ -349,6 +349,21 @@ this migration.)
   visible stderr warning) when the github platform has no PR context, instead of throwing.
 - Verified locally: `npm run check` / `check:types` / `build` / `test` (19/19) green.
 
+### 2026-06-17 — CI green ✅; gpt-5.5 dogfood caught a real security finding
+
+- **`build-and-test` PASSES on `2a8123c`** with `npm install` — the cross-platform lockfile fix worked.
+  (`Analyze (javascript)`/`Analyze (actions)` pass; the repo's default-setup `CodeQL` aggregate check
+  still fast-fails, unrelated to this PR.)
+- **The `gpt-5.5` dogfood self-review posted 2 inline `suggest_change` comments** — a clear upgrade over the
+  nano model — and caught a genuine security issue: `shippie-mention.yml` checked out untrusted PR (fork)
+  code in a privileged `issue_comment` context (write perms + secrets), i.e. a "pwn request" risk.
+  **Fixed** by gating the job on `author_association` (`OWNER`/`MEMBER`/`COLLABORATOR`) so only trusted
+  collaborators can trigger `/shippie`; applied to the workflow, the docs example, and a security note.
+  (The review's other inline comment re-flagged the `createReporter` fallback that was already applied.)
+- Verified locally: `npm run check` / `check:types` / `build` / `test` (19/19) green.
+
+**Migration status: COMPLETE, CI green, and dogfood-verified end-to-end.**
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,
