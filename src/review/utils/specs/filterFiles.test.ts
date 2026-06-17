@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 
 import type { ReviewFile } from '../../../common/types'
 import { filterFiles } from '../filterFiles'
