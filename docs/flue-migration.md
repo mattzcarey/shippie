@@ -285,6 +285,22 @@ stack cannot break `flue run review` — confirmed by re-running it green after 
 - Still needs a human: confirm the dogfood/default model (gpt-5-nano vs other) and that `OPENAI_API_KEY` is
   set as a repo secret so the self-review actually posts; optional `@flue/github` live-review channel.
 
+### 2026-06-17 — Real end-to-end PR review verified ✅ (migration complete)
+
+PR #470's dogfood `review` job (commit `13d90fa`, model `openai/gpt-5-nano`) ran **SUCCESS** (1m40s):
+**shippie reviewed its own PR via the GitHub Action and posted a summary comment** ("## General Summary
+🏴‍☠️ … Inline review notes (actionable issues found) …"). This confirms the full pipeline works in
+GitHub Actions: Action → `flue run review` → git diff → agent (pi tools) → reporter → GitHub comment.
+
+Notes (model quality, not bugs): `gpt-5-nano` put its findings in the summary body rather than calling
+`suggest_change` for separate inline comments (0 inline comments this run), and made a minor diff misread
+(it treated a trimmed file as deleted). Stronger models (Claude / larger OpenAI) use `suggest_change` and
+review more accurately — the integration is solid regardless.
+
+**Status: the flue migration is COMPLETE and verified end-to-end.** Remaining items are maintainer
+choices, not blockers: pick the default/dogfood model, optionally add a `@flue/github` live-review channel,
+and merge PR #470.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,
