@@ -327,6 +327,15 @@ and merge PR #470.
 - `docs/tag-shippie.md` rewritten (Actions-first) and README updated.
 - Verified: `npm run check` / `check:types` / `build` / `test` (19/19) green.
 
+### 2026-06-17 — CI fix: package-lock.json sync
+
+PR #470 commit `7eb01b7` `build-and-test` failed fast: `npm ci` EUSAGE — `package-lock.json` out of sync
+(a stray `@emnapi` transitive entry from the earlier `@flue/github` install). Regenerated with
+`npm install` (1 package) → `npm ci` now installs cleanly (429 packages); gate green (types/test 19-19/build).
+Pushed as `e7aec8e`. (Note: the repo's default-setup **CodeQL** aggregate check also fast-fails while the
+`Analyze (javascript)`/`Analyze (actions)` jobs pass — that's the repo's existing CodeQL setup, unrelated to
+this migration.)
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,
