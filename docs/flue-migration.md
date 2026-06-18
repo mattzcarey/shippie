@@ -374,6 +374,26 @@ dismissed alert #6** ("won't fix", mitigated by the gate). The `CodeQL` PR check
 checks are green** (build-and-test, review, Analyze ×2, CodeQL, snyk, PR-title). For a stricter posture, the
 webhook channel (`@flue/github`, API-based, no checkout) is the safe alternative for live `/shippie`.
 
+### 2026-06-18 — Local-run fix + layered test suite (model + GitHub mocked)
+
+- **Fixed a load-time crash** (caught by running locally per a maintainer request): the GitHub channel
+  called `createGitHubChannel({ webhookSecret: '' })` at import, which throws when `GITHUB_WEBHOOK_SECRET`
+  is unset — and since flue loads every discovered module, this **crashed `flue run review`** in the normal
+  no-secret case (CI's `continue-on-error` dogfood masked it). Now falls back to a placeholder so the module
+  loads inertly (verification fails closed). Verified: `flue run review` clean → `reviewed:0`; staged file →
+  computes the diff and reaches the model. Pushed as `3489554`.
+- **Added a layered test suite (vitest); every test mocks the model + GitHub/network — no real calls:**
+  - **Unit:** reporter (octokit mock + temp-dir local output, incl. the `createReporter` fallback),
+    suggest-change, `mcp/connect` (`connectMcpServer` mock + graceful failure), telemetry (fetch stub +
+    anonymized id), instructions (temp `AGENTS.md`/`CLAUDE.md`), context, channel tools + conversation-key
+    roundtrip, agent initializers (reviewer/mention). Plus existing config/diff/filterFiles.
+  - **Integration:** `workflows/review` `run()` driven with a fake `init` + mocked diff/reporter/mcp —
+    exercises the full orchestration (config → diff → filter → mcp → prompt → summary → result) with no real
+    model/git/GitHub.
+  - **e2e/smoke:** every discovered module imports without throwing when no secrets are set (the exact
+    regression above), the workflow's public surface (`run` + `route`), and the reporter local fallback.
+  - **67 tests across 13 files, all green; `tsc` + `biome` clean.** Run with `npm test`.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,

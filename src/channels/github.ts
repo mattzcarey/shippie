@@ -30,7 +30,8 @@ export const client = new Octokit({ auth: process.env.GITHUB_TOKEN })
 // Fall back to a placeholder so the module loads inertly; with the placeholder,
 // signature verification fails closed (all deliveries 401) until a real
 // GITHUB_WEBHOOK_SECRET is configured for the live channel deployment.
-const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || 'shippie-webhook-secret-unconfigured'
+const WEBHOOK_SECRET =
+  process.env.GITHUB_WEBHOOK_SECRET || 'shippie-webhook-secret-unconfigured'
 
 export const channel: GitHubChannel = createGitHubChannel({
   webhookSecret: WEBHOOK_SECRET,
