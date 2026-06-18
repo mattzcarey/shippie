@@ -364,6 +364,16 @@ this migration.)
 
 **Migration status: COMPLETE, CI green, and dogfood-verified end-to-end.**
 
+### 2026-06-18 — CodeQL alert dismissed; all checks green
+
+The last red check was CodeQL alert **#6 `actions/untrusted-checkout-toctou/critical`** on
+`shippie-mention.yml` — a genuine "pwn request" pattern (a privileged `issue_comment` workflow checks out
+and runs PR-head code with secrets). The `author_association` gate auto-fixed the non-TOCTOU variant
+(alert #5) but not the TOCTOU one. **Per maintainer decision, kept the collaborator-gated workflow and
+dismissed alert #6** ("won't fix", mitigated by the gate). The `CodeQL` PR check now passes; **all PR #470
+checks are green** (build-and-test, review, Analyze ×2, CodeQL, snyk, PR-title). For a stricter posture, the
+webhook channel (`@flue/github`, API-based, no checkout) is the safe alternative for live `/shippie`.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,

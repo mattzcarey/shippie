@@ -74,7 +74,9 @@ Then comment `/shippie review` on any pull request. This runs the same review as
 > **Security:** the `author_association` gate (`OWNER`/`MEMBER`/`COLLABORATOR`) is important. This job
 > runs with write permissions and secrets and checks out PR head code, so without the gate a fork author
 > could trigger it on malicious code (a "pwn request"). Keep the gate; only trusted collaborators can run
-> `/shippie`.
+> `/shippie`. CodeQL still flags this as an "untrusted checkout" — it's an accepted, gate-mitigated risk
+> (a trusted collaborator could still trigger a review on a malicious fork PR). For a stricter posture,
+> use the webhook **channel** below, which reviews via the GitHub API and never checks out PR code.
 
 > The Actions-on-comment path runs a **review**. For free-form questions (`/shippie does X handle Y?`),
 > use the webhook channel below, whose agent can answer as well as review.
