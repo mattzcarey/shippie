@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.21.0](https://github.com/mattzcarey/shippie/compare/v0.20.0...v0.21.0) (2026-06-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* rebuild shippie as a prebuilt agent on flue ([#470](https://github.com/mattzcarey/shippie/issues/470))
+
+### Features
+
+* rebuild shippie as a prebuilt agent on flue ([#470](https://github.com/mattzcarey/shippie/issues/470)) ([f6a2878](https://github.com/mattzcarey/shippie/commit/f6a2878218509a432ab6464d86c650d32447ffad))
+
 ## [0.20.0](https://github.com/mattzcarey/shippie/compare/v0.19.0...v0.20.0) (2025-08-01)
 
 
