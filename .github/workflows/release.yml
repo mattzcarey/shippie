@@ -18,6 +18,14 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest # provenance/OIDC require a GitHub-hosted runner
+    # Scopes the OIDC trust to this GitHub environment. Must match the
+    # "Environment name" set on the npm Trusted Publisher, or npm rejects the
+    # publish (the OIDC token only carries the environment claim when the job
+    # declares `environment:`). Add a "Deployment branches" rule (main only) on
+    # this environment in repo settings for no-friction hardening; add required
+    # reviewers only if you split publishing into its own job (otherwise every
+    # push to main pauses this job for approval).
+    environment: release
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
