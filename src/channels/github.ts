@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { type GitHubChannel, createGitHubChannel } from '@flue/github'
 import { defineTool, dispatch } from '@flue/runtime'
 import { Octokit } from 'octokit'
@@ -27,11 +28,12 @@ export const client = new Octokit({ auth: process.env.GITHUB_TOKEN })
 // Flue bundles and loads every discovered module (including this channel) when
 // the server starts or a workflow runs, so this must NOT throw at import time
 // when the webhook secret is absent (e.g. during one-shot `flue run review`).
-// Fall back to a placeholder so the module loads inertly; with the placeholder,
-// signature verification fails closed (all deliveries 401) until a real
-// GITHUB_WEBHOOK_SECRET is configured for the live channel deployment.
+// Fall back to an UNGUESSABLE per-process random secret so the module loads
+// inertly AND signature verification fails closed (all deliveries 401) until a
+// real GITHUB_WEBHOOK_SECRET is configured. A constant fallback would let an
+// attacker forge webhook deliveries when the secret is unset.
 const WEBHOOK_SECRET =
-  process.env.GITHUB_WEBHOOK_SECRET || 'shippie-webhook-secret-unconfigured'
+  process.env.GITHUB_WEBHOOK_SECRET || `shippie-unconfigured-${randomUUID()}`
 
 export const channel: GitHubChannel = createGitHubChannel({
   webhookSecret: WEBHOOK_SECRET,

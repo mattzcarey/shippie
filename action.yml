@@ -69,7 +69,9 @@ runs:
 
     - name: Install Shippie
       shell: bash
-      run: npm install --prefix "$GITHUB_ACTION_PATH" --no-audit --no-fund --loglevel=error
+      # --include=dev so @flue/cli (a devDependency, needed by `npx flue`) is
+      # installed even if the runner sets NODE_ENV=production.
+      run: npm install --prefix "$GITHUB_ACTION_PATH" --include=dev --no-audit --no-fund --loglevel=error
 
     - name: Run Shippie review 🚢
       shell: bash

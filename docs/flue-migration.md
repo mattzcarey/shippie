@@ -405,6 +405,27 @@ webhook channel (`@flue/github`, API-based, no checkout) is the safe alternative
 - **Release target: 0.21.0 (not a major).** Despite the breaking `feat!`, this ships as a minor on 0.x via
   a `Release-As: 0.21.0` commit footer (release-please would otherwise propose 1.0.0).
 
+### 2026-06-22 — Follow-up PR: lean package, Changesets + secure publish, review fixes
+
+Shipped as a follow-up PR (branch `fix/package-files`) on top of merged 0.21.0:
+
+- **Trimmed the published artifact:** `files` → `["dist", "bin"]` (was shipping all of `src/` incl. tests).
+  Tarball: **6 files** (down from 38). Verified by clean-installing the tarball and running `shippie review`
+  — flue resolves at runtime because `@flue/runtime` is a `dependency` and `dist/server.mjs` externalizes
+  it (it is NOT bundled, but IS installed via deps), so removing `src` is safe.
+- **Release tooling → Changesets** with the most-secure npm publish: `.github/workflows/release.yml`
+  (`changesets/action`, **npm provenance** via `NPM_CONFIG_PROVENANCE` + `id-token: write`, **OIDC trusted
+  publishing** preferred — no long-lived token; `NPM_TOKEN` fallback commented), `.changeset/config.json`
+  (`@changesets/changelog-github`), an initial patch changeset. Removed `release-package.yml` (release-please).
+  Maintainer step: enable the Trusted Publisher for `release.yml` on npmjs.com (else uncomment `NPM_TOKEN`).
+- **Triaged all #470 review comments** (workflow audit): 7 already-fixed; fixed 4 more real ones —
+  (1) `channels/github.ts` webhook-secret fallback is now an unguessable per-process random (fails closed),
+  (2) `diff.ts` uses a three-dot `base...head` range (GitHub PR semantics), (3) `docs/setup.md` `@v1`→`@v0`,
+  (4) `action.yml` install uses `--include=dev` so `@flue/cli` is present for `npx flue` even under
+  `NODE_ENV=production`. The untrusted-checkout (`uses: ./`) finding is the CodeQL risk previously **accepted/
+  dismissed**, so it's intentionally left as-is.
+- 73 tests green; tsc + biome clean.
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,

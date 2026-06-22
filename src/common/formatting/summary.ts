@@ -4,8 +4,7 @@
 export const FORMATTING = {
   SUMMARY_TITLE: '## General Summary 🏴‍☠️',
   SEPARATOR: '\n\n---\n\n',
-  SIGN_OFF:
-    '### Review powered by [Shippie 🚢](https://github.com/mattzcarey/shippie) - The open source, extensible review agent.',
+  SIGN_OFF: '### Review powered by [Shippie 🚢](https://github.com/mattzcarey/shippie)',
   CTA: `<details>
 <summary>🚀 Good review?</summary>
 

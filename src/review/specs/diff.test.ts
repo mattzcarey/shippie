@@ -79,15 +79,14 @@ describe('parseDiff', () => {
 })
 
 describe('buildDiffArgs', () => {
-  test('passes base/head as discrete argv (no shell string)', () => {
+  test('passes base/head as a three-dot range (no shell string)', () => {
     expect(buildDiffArgs(cfg({ baseSha: 'base123', headSha: 'head456' }))).toEqual([
       '-C',
       '/repo',
       'diff',
       '--diff-filter=AMRT',
       '-U0',
-      'base123',
-      'head456',
+      'base123...head456',
     ])
   })
 
