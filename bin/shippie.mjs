@@ -79,12 +79,15 @@ if (command === 'init' || command === 'configure') {
   mkdirSync(workflowDir, { recursive: true })
   writeFileSync(workflowPath, WORKFLOW_TEMPLATE)
   process.stdout.write(
-    `Created ${relative(process.cwd(), workflowPath)}\n\n` +
-      'Next steps:\n' +
-      '  1. Add a provider API key as a repo secret (Settings → Secrets and variables → Actions),\n' +
-      '     e.g. ANTHROPIC_API_KEY — or edit the workflow to use OPENAI_API_KEY / Cloudflare.\n' +
-      '  2. Open a pull request; Shippie will review it.\n\n' +
-      'Run reviews locally with: shippie review\n'
+    `Created ${relative(process.cwd(), workflowPath)}
+
+Next steps:
+  1. Add a provider API key as a repo secret (Settings → Secrets and variables → Actions),
+     e.g. ANTHROPIC_API_KEY — or edit the workflow to use OPENAI_API_KEY / Cloudflare.
+  2. Open a pull request; Shippie will review it.
+
+Run reviews locally with: shippie review
+`
   )
   process.exit(0)
 }
