@@ -1,102 +1,108 @@
 name: "Shippie 🚢"
-description: "an extensible code review agent"
+description: "an extensible code review agent built on flue"
 author: "Matt Carey"
 inputs:
-  MODEL_STRING:
-    description: "Model name to use for review"
+  MODEL:
+    description: "Flue model specifier, e.g. anthropic/claude-sonnet-4-6, openai/gpt-5.5, openrouter/..."
     required: false
-    default: "openai:gpt-4.1-mini"
+    default: "anthropic/claude-sonnet-4-6"
   REVIEW_LANGUAGE:
-    description: "Target natural language for translation"
+    description: "Target natural language for review feedback"
     required: false
     default: "English"
-  OPENAI_API_KEY:
-    description: "OpenAI API Key"
+  THINKING_LEVEL:
+    description: "Reasoning effort: off | minimal | low | medium | high | xhigh"
     required: false
-  GOOGLE_GENERATIVE_AI_API_KEY:
-    description: "Google API Key"
+    default: "medium"
+  IGNORE:
+    description: "Comma-separated glob patterns to ignore (e.g. '**/*.test.ts,dist/**')"
+    required: false
+  CUSTOM_INSTRUCTIONS:
+    description: "Extra instructions appended to the review prompt"
+    required: false
+  MCP_SERVERS:
+    description: >-
+      JSON object of remote MCP servers to attach, e.g.
+      '{"context7":{"url":"https://...","headers":{"Authorization":"Bearer ..."}}}'.
+      Only remote (HTTP/SSE) servers are supported.
     required: false
   ANTHROPIC_API_KEY:
-    description: "Anthropic API Key"
+    description: "Anthropic API key"
     required: false
-  GITHUB_TOKEN:
-    description: "Github token"
-    required: true
-  BASE_URL:
-    description: "AI Provider Base URL"
+  OPENAI_API_KEY:
+    description: "OpenAI API key"
     required: false
-  MAX_STEPS:
-    description: "Maximum number of agentic steps to take"
+  OPENROUTER_API_KEY:
+    description: "OpenRouter API key"
     required: false
-    default: "50"
+  CLOUDFLARE_API_KEY:
+    description: "Cloudflare API token, for model 'cloudflare-workers-ai/<model>' or 'cloudflare-ai-gateway/<model>'"
+    required: false
+  CLOUDFLARE_ACCOUNT_ID:
+    description: "Cloudflare account ID (required for Cloudflare Workers AI / AI Gateway providers)"
+    required: false
+  CLOUDFLARE_GATEWAY_ID:
+    description: "Cloudflare AI Gateway ID (only for model 'cloudflare-ai-gateway/<model>')"
+    required: false
   TELEMETRY:
-    description: "Enables anonymous telemetry"
+    description: "Send anonymous usage telemetry. Set to 'false' to opt out."
     required: false
     default: "true"
-  IGNORE:
-    description: "Comma-separated list of glob patterns to ignore (e.g., '**/*.test.ts,dist/**,*.md'). If not provided, sensible defaults will be used."
+  PR_NUMBER:
+    description: "Pull request number. Defaults to the pull_request event; pass explicitly for comment-triggered runs."
     required: false
-  DEBUG:
-    description: "Enables debug logging"
+  BASE_SHA:
+    description: "Base commit SHA to diff against. Defaults to the pull_request event."
     required: false
-    default: "false"
+  HEAD_SHA:
+    description: "Head commit SHA to diff. Defaults to the pull_request event."
+    required: false
+  GITHUB_TOKEN:
+    description: "GitHub token used to post review comments"
+    required: true
 runs:
   using: "composite"
   steps:
-    - uses: oven-sh/setup-bun@v2
+    - uses: actions/setup-node@v4
       with:
-        bun-version: latest
+        node-version: "22"
 
-    - name: Install dependencies
+    - name: Install Shippie
       shell: bash
-      run: |
-        bun install shippie
+      run: npm install --prefix "$GITHUB_ACTION_PATH" --no-audit --no-fund --loglevel=error
 
-    - name: Run Shippie Review 🚢
+    - name: Run Shippie review 🚢
       shell: bash
-      run: |
-        cmd_args="shippie review --platform=github"
-
-        # Inputs with defaults in action.yml - these will always have a value.
-        cmd_args="$cmd_args --modelString=${{ inputs.MODEL_STRING }}"
-        cmd_args="$cmd_args --reviewLanguage=${{ inputs.REVIEW_LANGUAGE }}"
-        cmd_args="$cmd_args --maxSteps=${{ inputs.MAX_STEPS }}"
-
-        # Input with no default in action.yml - only add if user provides it and it's non-empty.
-        if [ -n "${{ inputs.BASE_URL }}" ]; then
-          cmd_args="$cmd_args --baseUrl="${{ inputs.BASE_URL }}""
-        fi
-
-        if [ -n "${{ inputs.IGNORE }}" ]; then
-          # Parse the IGNORE input as a space or comma-separated list and add multiple --ignore flags
-          IFS=',' read -ra IGNORE_ARRAY <<< "${{ inputs.IGNORE }}"
-          for pattern in "${IGNORE_ARRAY[@]}"; do
-            # Trim whitespace and add --ignore flag for each pattern
-            pattern=$(echo "$pattern" | xargs)
-            if [ -n "$pattern" ]; then
-              cmd_args="$cmd_args --ignore=\"$pattern\""
-            fi
-          done
-        fi
-
-        # Boolean flags:
-        if [ "${{ inputs.DEBUG }}" = "true" ]; then
-          cmd_args="$cmd_args --debug"
-        fi
-
-        if [ "${{ inputs.TELEMETRY }}" = "false" ]; then
-          cmd_args="$cmd_args --telemetry=false"
-        fi
-
-        echo "Executing: bun $cmd_args"
-        bun $cmd_args
+      working-directory: ${{ github.action_path }}
       env:
-        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY || env.OPENAI_API_KEY }}
-        GOOGLE_GENERATIVE_AI_API_KEY: ${{ inputs.GOOGLE_GENERATIVE_AI_API_KEY || env.GOOGLE_GENERATIVE_AI_API_KEY }}
+        # Provider credentials (read by flue's model layer)
+        # `inputs.X || env.X`: support creds passed via `with:` OR inherited `env:`
+        # (the README/docs show both). Without the fallback, an unset input would
+        # clobber a caller-provided env var with an empty string.
         ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY || env.OPENAI_API_KEY }}
+        OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY || env.OPENROUTER_API_KEY }}
+        CLOUDFLARE_API_KEY: ${{ inputs.CLOUDFLARE_API_KEY || env.CLOUDFLARE_API_KEY }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
+        CLOUDFLARE_GATEWAY_ID: ${{ inputs.CLOUDFLARE_GATEWAY_ID || env.CLOUDFLARE_GATEWAY_ID }}
+        # GitHub commenting + PR identity (read by resolveReviewConfig)
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN || env.GITHUB_TOKEN }}
-        BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        GITHUB_SHA: ${{ github.sha }}
+        SHIPPIE_PR_NUMBER: ${{ inputs.PR_NUMBER || github.event.pull_request.number }}
+        BASE_SHA: ${{ inputs.BASE_SHA || github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ inputs.HEAD_SHA || github.event.pull_request.head.sha }}
+        # Review configuration
+        SHIPPIE_MODEL: ${{ inputs.MODEL }}
+        SHIPPIE_REVIEW_LANGUAGE: ${{ inputs.REVIEW_LANGUAGE }}
+        SHIPPIE_THINKING_LEVEL: ${{ inputs.THINKING_LEVEL }}
+        SHIPPIE_IGNORE: ${{ inputs.IGNORE }}
+        SHIPPIE_CUSTOM_INSTRUCTIONS: ${{ inputs.CUSTOM_INSTRUCTIONS }}
+        SHIPPIE_MCP_SERVERS: ${{ inputs.MCP_SERVERS }}
+        SHIPPIE_TELEMETRY: ${{ inputs.TELEMETRY }}
+      run: |
+        npx flue run review \
+          --root "$GITHUB_ACTION_PATH" \
+          --target node \
+          --payload "{\"platform\":\"github\",\"workspace\":\"$GITHUB_WORKSPACE\"}"
 branding:
   icon: "git-pull-request"
   color: "red"

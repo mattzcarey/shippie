@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 
 import type { ReviewFile } from '../../../common/types'
 import { filterFiles } from '../filterFiles'
@@ -154,5 +154,17 @@ describe('filterFiles unit test', () => {
     expect(result.some((f) => f.fileName === 'src/utils/helper.ts')).toBe(true)
     expect(result.some((f) => f.fileName === 'tests/unit/button.test.ts')).toBe(false)
     expect(result.some((f) => f.fileName === 'docs/api.md')).toBe(false)
+  })
+
+  test('matches ignore globs against workspace-relative paths', () => {
+    const testFiles: ReviewFile[] = [
+      { fileName: '/repo/src/app.ts', fileContent: '', changedLines: [] },
+      { fileName: '/repo/dist/bundle.js', fileContent: '', changedLines: [] },
+      { fileName: '/repo/node_modules/x/index.js', fileContent: '', changedLines: [] },
+    ]
+
+    const result = filterFiles(testFiles, ['dist/**', 'node_modules/**'], '/repo')
+
+    expect(result.map((f) => f.fileName)).toEqual(['/repo/src/app.ts'])
   })
 })

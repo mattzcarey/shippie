@@ -1,65 +1,125 @@
 # Setup Instructions 🤖
 
-Shippie 🚢 is a NodeJS package that uses LLMs to provide feedback on code. It is designed to be used in a CI environment to provide feedback on pull requests.
+Shippie 🚢 is a prebuilt code-review agent built on [flue](https://github.com/withastro/flue). It runs the agent loop on "pi" and reviews your code through a one-shot review workflow — either as a GitHub Action on pull requests, or locally against your staged changes.
 
 ## Prerequisites
 
-- Node 18+ or Bun 1.0+
+- Node >= 22.19
 - Git
-- Github or Gitlab CLI (optional for configure tool)
+- An API key for your chosen model provider (Anthropic, OpenAI, OpenRouter, or Cloudflare)
 
-## Easy Setup in CI 🚀
+## GitHub Action 🚀
 
-In the root of your git repository run:
+Add a workflow that runs shippie on every pull request. The job must check out with `fetch-depth: 0` (so the full diff is available) and grant `pull-requests: write` and `contents: read` permissions.
 
-```shell
-npx shippie configure --platform=github
+Create `.github/workflows/shippie.yml`:
+
+```yaml
+name: Shippie
+
+on:
+  pull_request:
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run shippie
+        uses: mattzcarey/shippie@v1
+        with:
+          MODEL: anthropic/claude-sonnet-4-6
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-The setup script will ask for your OpenAI API key. You can:
-1. **Leave it blank** - Uses GitHub Models (free) with the built-in `GITHUB_TOKEN` to access GitHub's AI models at `https://models.github.ai/inference`
-2. **Provide an OpenAI API key** - Uses OpenAI's API and automatically adds the `OPENAI_API_KEY` secret to your repo
+`GITHUB_TOKEN` is required. Provide the API key secret that matches your `MODEL` provider (see [Models](#models) below). Pin `@v<X>` to the major version you want.
 
-More info on GitHub Actions secrets can be found [here](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions).
+The action is a composite action that runs `actions/setup-node@v4` (Node 22), installs dependencies, and runs `npx flue run review`. The agent's final message becomes the PR summary comment, and inline findings are posted via the `suggest_change` tool.
 
-See [templates](https://github.com/mattzcarey/shippie/tree/main/templates) for the example yaml files. You can copy and paste them to perform a manual setup or have a look at the [action configuration options](https://github.com/mattzcarey/shippie/tree/main/docs/action-options.md).
+### Action inputs
 
-## Package Commands
+All inputs are optional unless noted.
 
-- `npx shippie review` - Runs the code review on the staged files.
-- `npx shippie configure` - Runs a setup tool to configure the application.
-
-### Configure Options
-
-- Setup Target - The platform you are using eg. github, gitlab or azure devops.
-
-### Review Options
-
-Shippie supports a bunch of setup options. This is a work in progress so check out the code [here](https://github.com/mattzcarey/shippie/blob/main/src/args.ts) for the latest options.
-
-- Review Language - The language you want to review the code in.
-- Platform - The platform you are using eg. github, gitlab, azure devops, local.
-- Model String - The model you want to use eg. openai:gpt-4o, azure:gpt-4o, anthropic:claude-3-5-sonnet-20240620. When using GitHub platform with GitHub Models, use openai:gpt-4o-mini with baseUrl=https://models.github.ai/inference.
-- (optional) Max Steps - The maximum number of steps the bot will take. defaults to 25.
-- (optional) Base URL - The base URL for the AI provider. Use https://models.github.ai/inference for GitHub Models, or change this to use OpenAI compatible providers like DeepSeek or local models with LM Studio or Ollama.
-- (optional) Ignore - A list of globs to ignore when reviewing the code. Defaults to `dist/**, node_modules/**, **/*.d.ts, **/*.lock, **/package-lock.json`.
-- (optional) Telemetry - Toggle anonymous telemetry. Defaults to True
-- (optional) Debug - Toggle debug logging. Defaults to False.
-
-Run `npx shippie --help` to see all the options available.
+| Input | Default | Notes |
+| --- | --- | --- |
+| `MODEL` | `anthropic/claude-sonnet-4-6` | `provider/model` string |
+| `REVIEW_LANGUAGE` | `English` | |
+| `THINKING_LEVEL` | `medium` | `off` \| `minimal` \| `low` \| `medium` \| `high` \| `xhigh` |
+| `IGNORE` | — | comma-separated glob patterns |
+| `CUSTOM_INSTRUCTIONS` | — | extra guidance for the reviewer |
+| `MCP_SERVERS` | — | JSON string of remote MCP servers |
+| `GITHUB_TOKEN` | — | **required** |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | — | provider credentials |
+| `CLOUDFLARE_API_KEY` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_GATEWAY_ID` | — | for Cloudflare providers |
 
 ## Local Usage 🌈
 
-Shippie 🚢 also works locally to review files staged for commit. Just add some files to the staging area.
+Shippie also runs locally with no server, reviewing your **staged** changes (`git diff --cached`).
 
-Export your OPENAI_API_KEY to the shell
-
-```shell
-export OPENAI_API_KEY=<your-api-key>
-```
-
-and run:
+Clone and install (Node >= 22.19):
 
 ```shell
-npx shippie review
+git clone https://github.com/mattzcarey/shippie.git
+cd shippie
+npm install
 ```
+
+Set up your `.env` with a model and the matching API key:
+
+```shell
+SHIPPIE_MODEL=anthropic/claude-sonnet-4-6
+ANTHROPIC_API_KEY=<your-api-key>
+```
+
+Stage the files you want reviewed, then run:
+
+```shell
+npm run review
+```
+
+This is an alias for `flue run review --target node` with the local platform. In local mode shippie reviews your staged diff and writes the results to `.shippie/review/local_*.md`.
+
+You can also run the workflow directly and pass the platform in the payload:
+
+```shell
+flue run review --target node --payload '{"platform":"local"}'
+```
+
+## Self-built Server 📦
+
+Shippie can build itself into a publishable, runnable server:
+
+```shell
+flue build --target node   # -> dist/server.mjs
+node dist/server.mjs       # or: npm start
+```
+
+Once running, trigger a review by calling the workflow endpoint and waiting for the result:
+
+```shell
+curl -X POST 'http://localhost:<port>/workflows/review?wait=result'
+```
+
+The package `main` is `./dist/server.mjs`.
+
+## Models
+
+Use a `provider/model` string and supply the matching credential:
+
+| Provider | Example model | Credentials |
+| --- | --- | --- |
+| `anthropic/<model>` | `anthropic/claude-sonnet-4-6` | `ANTHROPIC_API_KEY` |
+| `openai/<model>` | `openai/gpt-4.1-mini`, `openai/gpt-5` | `OPENAI_API_KEY` |
+| `openrouter/<model>` | — | `OPENROUTER_API_KEY` |
+| `cloudflare-workers-ai/<model>` | `cloudflare-workers-ai/@cf/openai/gpt-oss-120b` | `CLOUDFLARE_API_KEY` + `CLOUDFLARE_ACCOUNT_ID` |
+| `cloudflare-ai-gateway/<model>` | — | `CLOUDFLARE_API_KEY` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_GATEWAY_ID` |
+
+For Cloudflare Workers AI, prefer larger models with strong tool-calling (e.g. `@cf/openai/gpt-oss-120b`, `@cf/qwen/qwen3-30b-a3b-fp8`, `@cf/zai-org/glm-5.2`); small models like `@cf/meta/llama-3.3-70b` are weak at tool-calling. Custom OpenAI-compatible providers (Ollama, gateways) are registered with `registerProvider()` in `src/app.ts`.

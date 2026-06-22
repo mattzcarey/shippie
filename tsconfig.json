@@ -16,7 +16,7 @@
         "noFallthroughCasesInSwitch": true,
         "declaration": true,
         "sourceMap": true,
-        "types": ["bun-types"]
+        "types": ["node"]
     },
     "include": ["src/**/*.ts"],
     "exclude": ["node_modules", "dist", "**/*.test.ts"]

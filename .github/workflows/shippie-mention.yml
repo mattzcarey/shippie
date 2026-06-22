@@ -1,0 +1,53 @@
+name: Shippie /shippie
+
+# Run Shippie on demand when someone comments "/shippie" on a pull request.
+# No server needed — this runs the action in CI (the "Actions on comment" mode).
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  shippie:
+    # Only PR comments that contain "/shippie", from a non-bot user who is a
+    # trusted collaborator. The author_association gate is required: this job
+    # has write permissions + secrets and checks out PR head code, so allowing
+    # arbitrary (fork) authors to trigger it would be a "pwn request" risk.
+    if: >-
+      ${{ github.event.issue.pull_request &&
+          github.event.comment.user.type != 'Bot' &&
+          contains(github.event.comment.body, '/shippie') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR refs
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          data=$(gh pr view "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" --json headRefOid,baseRefOid)
+          echo "head_sha=$(echo "$data" | jq -r .headRefOid)" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$(echo "$data" | jq -r .baseRefOid)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+          fetch-depth: 0
+
+      - name: Ensure base commit is present
+        run: git fetch --no-tags --depth=1 origin "${{ steps.pr.outputs.base_sha }}" || true
+
+      - name: Run Shippie 🚢
+        uses: ./
+        with:
+          MODEL: openai/gpt-5.4-nano
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
