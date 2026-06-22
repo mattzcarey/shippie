@@ -1,7 +1,20 @@
 import { describe, expect, test } from 'vitest'
-import { parseDiff } from '../diff'
+import type { ReviewConfig } from '../config'
+import { buildDiffArgs, parseDiff } from '../diff'
 
 const WS = '/repo'
+
+const cfg = (over: Partial<ReviewConfig>): ReviewConfig =>
+  ({
+    platform: 'local',
+    workspace: '/repo',
+    model: 'm',
+    thinkingLevel: 'medium',
+    reviewLanguage: 'English',
+    telemetry: false,
+    mcpServers: {},
+    ...over,
+  }) as ReviewConfig
 
 describe('parseDiff', () => {
   test('single added range', () => {
@@ -62,5 +75,42 @@ describe('parseDiff', () => {
 
   test('empty diff yields no files', () => {
     expect(parseDiff('', WS)).toEqual([])
+  })
+})
+
+describe('buildDiffArgs', () => {
+  test('passes base/head as discrete argv (no shell string)', () => {
+    expect(buildDiffArgs(cfg({ baseSha: 'base123', headSha: 'head456' }))).toEqual([
+      '-C',
+      '/repo',
+      'diff',
+      '--diff-filter=AMRT',
+      '-U0',
+      'base123',
+      'head456',
+    ])
+  })
+
+  test('falls back to --cached without base/head', () => {
+    expect(buildDiffArgs(cfg({}))).toEqual([
+      '-C',
+      '/repo',
+      'diff',
+      '--diff-filter=AMRT',
+      '-U0',
+      '--cached',
+    ])
+  })
+
+  test('allows real refs (branch names, HEAD~1)', () => {
+    expect(() =>
+      buildDiffArgs(cfg({ baseSha: 'feat/foo-bar', headSha: 'HEAD~1' }))
+    ).not.toThrow()
+  })
+
+  test('rejects shell-injection / flag-injection refs', () => {
+    for (const bad of ['$(touch x)', 'a;b', '`id`', 'a b', '--upload-pack=evil', '-x']) {
+      expect(() => buildDiffArgs(cfg({ baseSha: bad, headSha: 'HEAD' }))).toThrow()
+    }
   })
 })

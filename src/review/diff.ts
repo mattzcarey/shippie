@@ -1,11 +1,11 @@
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import type { LineRange, ReviewFile } from '../common/types'
 import type { ReviewConfig } from './config'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 /** A changed file plus the raw unified diff for that file. */
 export interface ReviewFileWithDiff extends ReviewFile {
@@ -20,15 +20,36 @@ export interface ParsedDiffFile {
 }
 
 // AMRT = Added/Modified/Renamed/Type-changed. -U0 = no context lines.
-const DIFF_OPTS = '--diff-filter=AMRT -U0'
+const DIFF_OPTS = ['--diff-filter=AMRT', '-U0']
 
-const buildDiffCommand = (cfg: ReviewConfig): string => {
-  const base = `git -C "${cfg.workspace}" diff ${DIFF_OPTS}`
-  if (cfg.baseSha && cfg.headSha) {
-    return `${base} ${cfg.baseSha} ${cfg.headSha}`
+/**
+ * A git revision/ref/SHA we are willing to pass to `git diff`. baseSha/headSha
+ * can originate from the workflow payload, so reject shell metacharacters and a
+ * leading "-" (which git would treat as an option) to prevent argument
+ * injection. We also run git via execFile (no shell), so there is no shell to
+ * inject into either.
+ */
+const SAFE_REF = /^[\w./~^-]+$/
+const assertSafeRef = (value: string, label: string): string => {
+  if (!SAFE_REF.test(value) || value.startsWith('-')) {
+    throw new Error(`Invalid ${label}: ${JSON.stringify(value)}`)
   }
-  // Local default: review staged changes.
-  return `${base} --cached`
+  return value
+}
+
+/** Build the argv for `git diff` (no shell — every value is a discrete arg). */
+export const buildDiffArgs = (cfg: ReviewConfig): string[] => {
+  const args = ['-C', cfg.workspace, 'diff', ...DIFF_OPTS]
+  if (cfg.baseSha && cfg.headSha) {
+    args.push(
+      assertSafeRef(cfg.baseSha, 'baseSha'),
+      assertSafeRef(cfg.headSha, 'headSha')
+    )
+  } else {
+    // Local default: review staged changes.
+    args.push('--cached')
+  }
+  return args
 }
 
 /**
@@ -89,8 +110,9 @@ export const parseDiff = (rawDiff: string, workspace: string): ParsedDiffFile[] 
 export const getChangedFiles = async (
   cfg: ReviewConfig
 ): Promise<{ files: ReviewFileWithDiff[]; rawDiff: string }> => {
-  const command = buildDiffCommand(cfg)
-  const { stdout: rawDiff } = await execAsync(command, { maxBuffer: 1024 * 1024 * 20 })
+  const { stdout: rawDiff } = await execFileAsync('git', buildDiffArgs(cfg), {
+    maxBuffer: 1024 * 1024 * 20,
+  })
 
   if (!rawDiff.trim()) {
     return { files: [], rawDiff: '' }

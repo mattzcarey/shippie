@@ -25,7 +25,7 @@ export async function run({ init, payload, env }: FlueContext<ReviewPayload>) {
   const cfg = resolveReviewConfig(payload, env as NodeJS.ProcessEnv)
 
   const { files } = await getChangedFiles(cfg)
-  const filtered = filterFiles(files, cfg.ignore) as ReviewFileWithDiff[]
+  const filtered = filterFiles(files, cfg.ignore, cfg.workspace) as ReviewFileWithDiff[]
 
   if (filtered.length === 0) {
     return { reviewed: 0, summaryPosted: false, message: 'No changed files to review.' }

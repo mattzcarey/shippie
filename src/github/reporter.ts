@@ -93,10 +93,15 @@ const createGithubReporter = (cfg: ReviewConfig): Reporter => {
   }
 }
 
+// One report file per process so inline comments (posted by the agent's
+// reporter, created in the agent initializer) and the summary (posted by the
+// workflow's reporter) land in the SAME file, even though they come from two
+// separate createReporter() calls.
+const LOCAL_RUN_TIMESTAMP = new Date().toISOString().replace(/:/g, '-')
+
 const createLocalReporter = (cfg: ReviewConfig): Reporter => {
   const reviewDir = join(cfg.workspace, '.shippie', 'review')
-  const timestamp = new Date().toISOString().replace(/:/g, '-')
-  const reviewFile = join(reviewDir, `local_${timestamp}.md`)
+  const reviewFile = join(reviewDir, `local_${LOCAL_RUN_TIMESTAMP}.md`)
 
   const ensureDir = async (): Promise<void> => {
     await mkdir(reviewDir, { recursive: true })

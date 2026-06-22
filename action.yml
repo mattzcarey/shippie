@@ -76,14 +76,17 @@ runs:
       working-directory: ${{ github.action_path }}
       env:
         # Provider credentials (read by flue's model layer)
-        ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY }}
-        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
-        OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY }}
-        CLOUDFLARE_API_KEY: ${{ inputs.CLOUDFLARE_API_KEY }}
-        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
-        CLOUDFLARE_GATEWAY_ID: ${{ inputs.CLOUDFLARE_GATEWAY_ID }}
+        # `inputs.X || env.X`: support creds passed via `with:` OR inherited `env:`
+        # (the README/docs show both). Without the fallback, an unset input would
+        # clobber a caller-provided env var with an empty string.
+        ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY || env.OPENAI_API_KEY }}
+        OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY || env.OPENROUTER_API_KEY }}
+        CLOUDFLARE_API_KEY: ${{ inputs.CLOUDFLARE_API_KEY || env.CLOUDFLARE_API_KEY }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
+        CLOUDFLARE_GATEWAY_ID: ${{ inputs.CLOUDFLARE_GATEWAY_ID || env.CLOUDFLARE_GATEWAY_ID }}
         # GitHub commenting + PR identity (read by resolveReviewConfig)
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN || env.GITHUB_TOKEN }}
         SHIPPIE_PR_NUMBER: ${{ inputs.PR_NUMBER || github.event.pull_request.number }}
         BASE_SHA: ${{ inputs.BASE_SHA || github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ inputs.HEAD_SHA || github.event.pull_request.head.sha }}

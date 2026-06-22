@@ -206,6 +206,28 @@ describe('local reporter', () => {
     expect(content).toContain('local summary text')
     expect(content).toContain(FORMATTING.SIGN_OFF)
   })
+
+  it('shares one report file across separately-created reporters', async () => {
+    // The agent's reporter (inline comments) and the workflow's reporter
+    // (summary) are created by two separate createReporter() calls; they must
+    // still write to the same local_*.md file.
+    const agentReporter = createReporter(localConfig(dir))
+    await agentReporter.postReviewComment({
+      filePath: 'src/x.ts',
+      comment: 'inline note',
+      startLine: 1,
+      endLine: 1,
+    })
+    const workflowReporter = createReporter(localConfig(dir))
+    await workflowReporter.postSummary('the summary')
+
+    const reviewDir = join(dir, '.shippie', 'review')
+    const files = (await readdir(reviewDir)).filter((f) => f.endsWith('.md'))
+    expect(files.length).toBe(1)
+    const content = await readFile(join(reviewDir, files[0]), 'utf8')
+    expect(content).toContain('inline note')
+    expect(content).toContain('the summary')
+  })
 })
 
 describe('createReporter fallback', () => {
