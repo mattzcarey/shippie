@@ -14,8 +14,8 @@
  *   OPENROUTER_API_KEY, or CLOUDFLARE_API_KEY + CLOUDFLARE_ACCOUNT_ID).
  */
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const pkgRoot = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -24,15 +24,68 @@ const HELP = `shippie — an extensible code review agent (built on flue)
 
 Usage:
   shippie review     Review the current repo (local = staged diff; CI = the PR)
+  shippie init       Scaffold a GitHub Actions workflow that runs Shippie on PRs
+  shippie configure  Deprecated alias for "init" (removed in the next major version)
 
 Set a model + provider key first, e.g.:
   export ANTHROPIC_API_KEY=...   # with SHIPPIE_MODEL=anthropic/claude-sonnet-4-6 (default)
+`
+
+const WORKFLOW_TEMPLATE = `name: Shippie 🚢
+
+on:
+  pull_request:
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: mattzcarey/shippie@v0
+        with:
+          MODEL: anthropic/claude-sonnet-4-6
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `
 
 const [command = 'review'] = process.argv.slice(2)
 
 if (command === '-h' || command === '--help' || command === 'help') {
   process.stdout.write(HELP)
+  process.exit(0)
+}
+
+if (command === 'init' || command === 'configure') {
+  if (command === 'configure') {
+    process.stderr.write(
+      'shippie: "configure" is deprecated and will be removed in the next major version. Use "shippie init".\n'
+    )
+  }
+  const force = process.argv.includes('--force')
+  const workflowDir = join(process.cwd(), '.github', 'workflows')
+  const workflowPath = join(workflowDir, 'shippie.yml')
+  if (existsSync(workflowPath) && !force) {
+    process.stderr.write(
+      `shippie: ${relative(process.cwd(), workflowPath)} already exists. Re-run with --force to overwrite.\n`
+    )
+    process.exit(1)
+  }
+  mkdirSync(workflowDir, { recursive: true })
+  writeFileSync(workflowPath, WORKFLOW_TEMPLATE)
+  process.stdout.write(
+    `Created ${relative(process.cwd(), workflowPath)}\n\n` +
+      'Next steps:\n' +
+      '  1. Add a provider API key as a repo secret (Settings → Secrets and variables → Actions),\n' +
+      '     e.g. ANTHROPIC_API_KEY — or edit the workflow to use OPENAI_API_KEY / Cloudflare.\n' +
+      '  2. Open a pull request; Shippie will review it.\n\n' +
+      'Run reviews locally with: shippie review\n'
+  )
   process.exit(0)
 }
 

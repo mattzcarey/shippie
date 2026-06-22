@@ -32,7 +32,7 @@ https://github.com/mattzcarey/shippie/assets/77928207/92029baf-f691-465f-8d15-e1
 
 ### GitHub Action
 
-Add a workflow that runs shippie on pull requests. It needs a full checkout (`fetch-depth: 0`), PR write permissions, and a provider API key.
+Run `npx shippie init` to scaffold the workflow below, then add your provider API key as a repo secret. Or add it manually — it needs a full checkout (`fetch-depth: 0`), PR write permissions, and a provider API key.
 
 ```yaml
 # .github/workflows/shippie.yml

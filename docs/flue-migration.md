@@ -394,6 +394,17 @@ webhook channel (`@flue/github`, API-based, no checkout) is the safe alternative
     regression above), the workflow's public surface (`run` + `route`), and the reporter local fallback.
   - **67 tests across 13 files, all green; `tsc` + `biome` clean.** Run with `npm test`.
 
+### 2026-06-22 — `shippie init`/`configure`, snyk cleared, target 0.21.0
+
+- **Scaffold command re-added:** `shippie init` (preferred) writes `.github/workflows/shippie.yml`;
+  `shippie configure` is a **deprecated alias** that warns it will be removed in the next major version.
+  `--force` overwrites an existing file. Implemented in `bin/shippie.mjs`; README updated.
+- **snyk cleared:** `npm audit fix` (8→3) plus `overrides` for `hono`@^4.12.26 and `esbuild`@^0.28.1
+  (both transitive flue deps; patch-level bumps within flue's ranges). `npm audit` → **0 vulnerabilities**;
+  `build` / `test` (73) / `flue run review` smoke all green.
+- **Release target: 0.21.0 (not a major).** Despite the breaking `feat!`, this ships as a minor on 0.x via
+  a `Release-As: 0.21.0` commit footer (release-please would otherwise propose 1.0.0).
+
 ### Remaining work (next iterations)
 
 - **Docs + README:** rewrite `docs/*.md` (setup, mcp, ai-provider-config, action-options, rules-files,
