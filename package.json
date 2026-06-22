@@ -1,6 +1,6 @@
 {
     "name": "shippie",
-    "version": "0.21.0",
+    "version": "0.21.1",
     "description": "an extensible code review agent",
     "type": "module",
     "main": "./dist/server.mjs",
@@ -72,5 +72,8 @@
         "hono": "^4.12.26",
         "esbuild": "^0.28.1"
     },
-    "files": ["dist", "bin"]
+    "files": [
+        "dist",
+        "bin"
+    ]
 }
