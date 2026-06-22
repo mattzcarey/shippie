@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# Prevent overlapping release runs on the same ref. A later push cancels/queues
+# behind the in-flight one so we never publish from a stale tree.
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write # create release-version PRs, tags and GitHub releases
+  pull-requests: write # open/update the "Version Packages" PR
+  id-token: write # REQUIRED: mint the OIDC token for trusted publishing + provenance
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest # provenance/OIDC require a GitHub-hosted runner
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # changesets needs full history to diff against baseBranch
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org" # writes the .npmrc registry entry
+
+      # Node 22 LTS bundles npm 10.x, but OIDC trusted publishing + automatic
+      # provenance require npm >= 11.5.1. Upgrade the CLI before publishing.
+      - name: Upgrade npm (OIDC trusted publishing needs npm >= 11.5.1)
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        # npm install (not npm ci): the lockfile is generated on macOS and lacks
+        # Linux-only optional deps (@emnapi/*), which makes `npm ci` EUSAGE here.
+        run: npm install --no-audit --no-fund
+
+      - name: Create Release PR or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # `release` script: builds, then runs `changeset publish`.
+          # changeset publish runs `npm publish` per changed package.
+          publish: npm run release
+          # `version` script bumps versions + writes the changelog.
+          version: npm run version
+        env:
+          # GITHUB_TOKEN lets the action open the "Version Packages" PR and
+          # create GitHub releases. The default token is sufficient.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Provenance: emit a signed, public attestation linking the published
+          # tarball to this workflow + commit. With OIDC trusted publishing this
+          # is also automatic, but setting it explicitly is harmless and ensures
+          # provenance even on the token fallback path below.
+          NPM_CONFIG_PROVENANCE: true
+
+          # --- AUTH ---
+          # PREFERRED: OIDC trusted publishing. NO long-lived token is needed.
+          # `id-token: write` above + a Trusted Publisher configured on npmjs.com
+          # (repo mattzcarey/shippie, workflow release.yml) let npm exchange the
+          # OIDC token for a short-lived publish credential. Leave the line below
+          # commented out while trusted publishing is in use.
+          #
+          # FALLBACK: if OIDC trusted publishing is NOT yet configured on
+          # npmjs.com, uncomment the next line and add the NPM_TOKEN secret
+          # (a granular/automation token with publish rights) to the repo.
+          # NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

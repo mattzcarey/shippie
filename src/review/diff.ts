@@ -41,10 +41,12 @@ const assertSafeRef = (value: string, label: string): string => {
 export const buildDiffArgs = (cfg: ReviewConfig): string[] => {
   const args = ['-C', cfg.workspace, 'diff', ...DIFF_OPTS]
   if (cfg.baseSha && cfg.headSha) {
-    args.push(
-      assertSafeRef(cfg.baseSha, 'baseSha'),
-      assertSafeRef(cfg.headSha, 'headSha')
-    )
+    // Three-dot range: diff from the merge-base of base..head — matches GitHub's
+    // "Files changed" view and excludes changes that landed on the base branch
+    // after this PR branched.
+    const base = assertSafeRef(cfg.baseSha, 'baseSha')
+    const head = assertSafeRef(cfg.headSha, 'headSha')
+    args.push(`${base}...${head}`)
   } else {
     // Local default: review staged changes.
     args.push('--cached')

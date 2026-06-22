@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run shippie
-        uses: mattzcarey/shippie@v1
+        uses: mattzcarey/shippie@v0
         with:
           MODEL: anthropic/claude-sonnet-4-6
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
