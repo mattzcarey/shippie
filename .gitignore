@@ -33,3 +33,6 @@ cdk.context.json
 
 # PEM
 *.pem
+
+# TypeScript build cache
+*.tsbuildinfo
