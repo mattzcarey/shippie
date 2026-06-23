@@ -79,46 +79,39 @@ const AgentFeatures = () => {
               <div
                 key={agentFeature.name}
                 className={cn(
-                  'rounded-xl overflow-hidden border transition-all duration-500',
+                  'flex flex-col overflow-hidden rounded-2xl border bg-card/40 backdrop-blur transition-all duration-500',
                   activeIndex === index
-                    ? 'border-red-500 border-2 shadow-lg shadow-red-200 dark:shadow-red-900/30 scale-105 transform'
-                    : 'border-gray-200 dark:border-gray-700 hover:shadow-md'
+                    ? 'border-red-500/50 shadow-xl shadow-red-500/10 ring-1 ring-red-500/20'
+                    : 'border-border hover:border-white/20 hover:bg-card/60'
                 )}
               >
-                <div
-                  className={cn(
-                    'p-8',
-                    activeIndex === index
-                      ? 'bg-red-50 dark:bg-red-900/10'
-                      : 'bg-white dark:bg-neutral-900'
-                  )}
-                >
-                  <h3 className="text-xl font-bold mb-4">{agentFeature.name}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                <div className="flex-1 p-8">
+                  <h3 className="mb-3 text-xl font-semibold tracking-tight">
+                    {agentFeature.name}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     {agentFeature.description}
                   </p>
                 </div>
 
-                <div className="p-8 bg-gray-50 dark:bg-neutral-800 space-y-4">
-                  <h4 className="text-sm uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 mb-4">
+                <div className="space-y-3 border-t border-border bg-muted/20 p-8">
+                  <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
                     Highlights
                   </h4>
 
                   {agentFeature.features.map((feature) => (
-                    <div key={feature.title} className="flex items-start mb-3">
+                    <div key={feature.title} className="flex items-start gap-3">
                       <Check
                         weight="bold"
                         className={cn(
-                          'h-5 w-5 mr-3 flex-shrink-0 mt-0.5',
-                          activeIndex === index ? 'text-red-500' : 'text-green-500'
+                          'mt-0.5 h-4 w-4 flex-shrink-0 transition-colors',
+                          activeIndex === index ? 'text-red-400' : 'text-emerald-400/80'
                         )}
                       />
                       <div>
-                        <span className="text-sm text-gray-700 dark:text-gray-200">
-                          {feature.title}
-                        </span>
+                        <span className="text-sm text-foreground/90">{feature.title}</span>
                         {feature.description && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {feature.description}
                           </p>
                         )}

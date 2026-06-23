@@ -1,6 +1,5 @@
-import { Copy } from '@phosphor-icons/react'
+import { Check, Copy } from '@phosphor-icons/react'
 import { useState } from 'react'
-import { Button } from './ui/button'
 
 interface ShellCommandProps {
   command: string
@@ -16,20 +15,32 @@ const ShellCommand = ({ command }: ShellCommandProps) => {
   }
 
   return (
-    <div className="bg-white text-slate-900 font-mono rounded-md overflow-hidden w-full max-w-xl shadow-sm border border-slate-200">
-      <div className="p-4 text-sm flex items-center justify-between">
-        <div className="flex items-center">
-          <span className="text-green-600 mr-2">$</span>
-          <span className="text-slate-700">{command}</span>
+    <div className="group relative w-full max-w-xl overflow-hidden rounded-xl border border-border bg-card/40 shadow-xl shadow-black/30 backdrop-blur">
+      {/* faint top highlight for a glassy terminal feel */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="flex items-center justify-between gap-3 px-5 py-4 font-mono text-sm">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="select-none text-emerald-400">$</span>
+          <span className="truncate text-foreground/90">{command}</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={copyToClipboard}
-          className="text-slate-500 hover:text-slate-700"
+          aria-label="Copy command"
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          <Copy size={16} weight={copied ? 'fill' : 'regular'} />
-        </Button>
+          {copied ? (
+            <>
+              <Check size={14} weight="bold" className="text-emerald-400" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy size={14} />
+              Copy
+            </>
+          )}
+        </button>
       </div>
     </div>
   )

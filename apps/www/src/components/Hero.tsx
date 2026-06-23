@@ -47,7 +47,9 @@ const Hero = () => {
           </div>
           <div className="flex gap-4 flex-col">
             <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter text-center font-regular">
-              <span className="font-semibold">AI code review</span>
+              <span className="bg-gradient-to-b from-white to-white/65 bg-clip-text font-semibold text-transparent">
+                AI code review
+              </span>
               <span className="mt-2 flex flex-wrap items-baseline justify-center gap-x-3 text-3xl text-muted-foreground md:text-5xl">
                 <span>on every</span>
                 <span className="relative inline-block whitespace-nowrap text-left font-semibold text-red-500">
