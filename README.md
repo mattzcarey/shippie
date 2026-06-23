@@ -118,7 +118,7 @@ This repo targets Node >= 22.19 with npm.
 
    - `npm run dev` — run flue in dev mode
    - `npm run build` — build a publishable Node server to `dist/server.mjs` (run it with `npm run start`, then `POST /workflows/review?wait=result`)
-   - `npm run check` — lint/format with biome
+   - `npm run check` — lint with oxlint + check formatting with oxfmt
    - `npm run check:types` — typecheck with tsc
    - `npm test` — run tests
 

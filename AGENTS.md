@@ -19,7 +19,7 @@ anywhere flue deploys (Node, Cloudflare, GitHub Actions, GitLab CI).
 ## Build, Test, and Development Commands
 
 - Install: `npm install` (Node >= 22.19 required).
-- Lint: `npm run check` (Biome). Auto-fix: `npm run check:fix`.
+- Lint + format: `npm run check` (oxlint + oxfmt). Auto-fix: `npm run check:fix`.
 - Type-check: `npm run check:types` (`tsc --noEmit`).
 - Build: `npm run build` (`flue build --target node` → `dist/server.mjs`).
 - Run a review locally: `npm run review` (`flue run review --target node`); reviews **staged** changes and writes to `.shippie/review/`. Pass `--payload '{"platform":"local"}'` explicitly if needed.
@@ -28,7 +28,7 @@ anywhere flue deploys (Node, Cloudflare, GitHub Actions, GitLab CI).
 
 ## Coding Style
 
-- Biome: two-space indent, single quotes, trailing commas (ES5), semicolons as-needed; let Biome organize imports. Line width 90.
+- oxfmt: two-space indent, single quotes, trailing commas (ES5), semicolons as-needed. Line width 90. Linting via oxlint (`correctness`).
 - TypeScript strict; resolve `noUnused*` rather than suppressing. ESM (`"type": "module"`).
 - Tools use **valibot** schemas (`v.object(...)`); the agent loop and model providers come from `@flue/runtime`.
 

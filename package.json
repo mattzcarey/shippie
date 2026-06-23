@@ -21,10 +21,10 @@
         "version": "changeset version",
         "test": "vitest run",
         "test:watch": "vitest",
-        "check": "biome check .",
+        "check": "oxlint && oxfmt --check",
         "check:types": "tsc --noEmit",
-        "check:fix": "biome check . --fix",
-        "check:fix:unsafe": "biome check . --unsafe --fix"
+        "check:fix": "oxlint --fix && oxfmt",
+        "check:fix:unsafe": "oxlint --fix-dangerously && oxfmt"
     },
     "keywords": [
         "code-review",
@@ -59,12 +59,13 @@
         "valibot": "^1.4.1"
     },
     "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
         "@changesets/changelog-github": "^0.7.0",
         "@changesets/cli": "^2.31.0",
         "@flue/cli": "1.0.0-beta.1",
         "@types/node": "^22.10.0",
         "@types/picomatch": "^4.0.0",
+        "oxfmt": "^0.56.0",
+        "oxlint": "^1.71.0",
         "typescript": "^5.1.6",
         "vitest": "^3.2.4"
     },
