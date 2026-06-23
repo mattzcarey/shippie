@@ -129,6 +129,17 @@
   animation: marquee 28s linear infinite;
 }
 
+/* Base UI Accordion panel — height animation driven by Base UI's CSS var */
+.faq-panel {
+  height: var(--accordion-panel-height);
+  overflow: hidden;
+  transition: height 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.faq-panel[data-starting-style],
+.faq-panel[data-ending-style] {
+  height: 0;
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

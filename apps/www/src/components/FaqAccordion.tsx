@@ -1,4 +1,5 @@
-import { Collapsible } from '@cloudflare/kumo/components/collapsible'
+import { Accordion } from '@cloudflare/kumo/primitives/accordion'
+import { CaretDown } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 
 const GITHUB_REPO = 'https://github.com/mattzcarey/shippie'
@@ -86,23 +87,30 @@ const FaqAccordion = () => {
             </h2>
           </div>
 
-          <div className="mt-2 w-full max-w-3xl space-y-3">
+          <Accordion.Root className="mt-2 w-full max-w-3xl space-y-3">
             {faqs.map((faq) => (
-              <Collapsible.Root
+              <Accordion.Item
                 key={faq.q}
-                className="border border-border bg-card/40 px-5 transition-colors hover:border-border/80"
+                className="border border-border bg-card/40 transition-colors hover:border-border/80"
               >
-                <Collapsible.DefaultTrigger>
-                  <span className="text-left font-medium text-foreground">{faq.q}</span>
-                </Collapsible.DefaultTrigger>
-                <Collapsible.DefaultPanel>
-                  <div className="pb-4 text-sm leading-relaxed text-muted-foreground">
+                <Accordion.Header>
+                  <Accordion.Trigger className="group flex w-full cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left font-medium text-foreground">
+                    {faq.q}
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className="shrink-0 text-signal transition-transform duration-200 group-data-[panel-open]:rotate-180"
+                    />
+                  </Accordion.Trigger>
+                </Accordion.Header>
+                <Accordion.Panel className="faq-panel">
+                  <div className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">
                     {faq.a}
                   </div>
-                </Collapsible.DefaultPanel>
-              </Collapsible.Root>
+                </Accordion.Panel>
+              </Accordion.Item>
             ))}
-          </div>
+          </Accordion.Root>
         </div>
       </div>
     </div>
