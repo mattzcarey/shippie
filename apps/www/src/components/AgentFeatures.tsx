@@ -109,7 +109,9 @@ const AgentFeatures = () => {
                         )}
                       />
                       <div>
-                        <span className="text-sm text-foreground/90">{feature.title}</span>
+                        <span className="text-sm text-foreground/90">
+                          {feature.title}
+                        </span>
                         {feature.description && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             {feature.description}
