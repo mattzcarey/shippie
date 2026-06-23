@@ -3,48 +3,45 @@ import { useEffect, useState } from 'react'
 import { cn } from '../lib/utils'
 import { ShellCommand } from './ShellCommand'
 
-interface AgentFeature {
-  title: string
-  description?: string
-}
-
 interface Agent {
   name: string
+  code: string
   description: string
-  features: AgentFeature[]
-  highlighted?: boolean
+  features: string[]
 }
 
 const agentFeatures: Agent[] = [
   {
     name: 'Reviews on GitHub',
+    code: 'CI',
     description:
-      'Shippie runs as a GitHub Action on your pull requests. It reads the diff and posts focused inline comments plus a summary, just like a human reviewer.',
+      'Runs as a GitHub Action on every pull request. Reads the diff and posts focused inline comments plus a summary — like a human reviewer, minus the wait.',
     features: [
-      { title: 'Catches exposed secrets and potential bugs' },
-      { title: 'Flags slow or inefficient code and unhandled edge cases' },
-      { title: 'Points out missing tests' },
+      'Catches exposed secrets and bugs',
+      'Flags slow code and edge cases',
+      'Points out missing tests',
     ],
   },
   {
     name: 'Explores your codebase',
+    code: 'AGENT',
     description:
-      'Built on the flue agent framework, Shippie runs an agent loop with real developer tools — so it reads beyond the diff to understand the full picture.',
+      'Built on the flue agent framework, Shippie runs a real agent loop with developer tools — so it reads far beyond the diff to understand the full picture.',
     features: [
-      { title: 'Navigates files and follows references, not just the diff' },
-      { title: 'Provider-agnostic: Anthropic, OpenAI, OpenRouter, Cloudflare' },
-      { title: 'Open source and extendable to fit your workflow' },
+      'Follows references, not just the diff',
+      'Anthropic · OpenAI · OpenRouter · Cloudflare',
+      'Open source and extendable',
     ],
-    highlighted: true,
   },
   {
     name: 'Extend it with MCP',
+    code: 'MCP',
     description:
-      'Shippie acts as a Model Context Protocol (MCP) client, so you can connect external tools and give the agent more context during a review.',
+      'Acts as a Model Context Protocol client, so you can wire in external tools and give the agent more context while it reviews.',
     features: [
-      { title: 'Browser automation to QA web apps' },
-      { title: 'Observability and documentation servers' },
-      { title: 'Bring your own MCP servers' },
+      'Browser automation to QA web apps',
+      'Observability and docs servers',
+      'Bring your own MCP servers',
     ],
   },
 ]
@@ -56,96 +53,107 @@ const AgentFeatures = () => {
     const interval = setInterval(() => {
       setActiveIndex((current) => (current + 1) % agentFeatures.length)
     }, 3000)
-
     return () => clearInterval(interval)
   }, [])
 
   return (
-    <div id="agent" className="w-full">
-      <div className="container mx-auto">
-        <div className="flex gap-8 py-20 lg:py-32 items-center justify-center flex-col">
-          <div className="flex gap-4 flex-col">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-center">
+    <section id="agent" className="w-full border-t border-border/60">
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col items-center py-24 lg:py-32">
+          <div className="flex flex-col items-center text-center">
+            <span className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-signal">
+              The inspection
+            </span>
+            <h2 className="max-w-3xl font-display text-[clamp(2.25rem,5vw,3.75rem)] font-extrabold uppercase leading-[0.92] tracking-tight">
               A reviewer that reads the whole picture
             </h2>
-            <p className="text-lg leading-relaxed tracking-tight text-muted-foreground max-w-2xl text-center mx-auto">
-              Shippie does the read-through a human reviewer would, on every change you
+            <p className="mt-5 max-w-xl text-balance text-muted-foreground">
+              Shippie does the read-through a human reviewer would — on every change you
               ship.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mt-8">
-            {agentFeatures.map((agentFeature, index) => (
+          <div className="mt-16 grid w-full max-w-6xl grid-cols-1 gap-px overflow-hidden border border-border bg-border md:grid-cols-3">
+            {agentFeatures.map((agent, index) => (
               <div
-                key={agentFeature.name}
+                key={agent.name}
                 className={cn(
-                  'flex flex-col overflow-hidden rounded-2xl border bg-card/40 backdrop-blur transition-all duration-500',
-                  activeIndex === index
-                    ? 'border-red-500/50 shadow-xl shadow-red-500/10 ring-1 ring-red-500/20'
-                    : 'border-border hover:border-white/20 hover:bg-card/60'
+                  'group relative flex flex-col bg-card p-8 transition-colors duration-500',
+                  activeIndex === index ? 'bg-card' : 'hover:bg-secondary/60'
                 )}
               >
-                <div className="flex-1 p-8">
-                  <h3 className="mb-3 text-xl font-semibold tracking-tight">
-                    {agentFeature.name}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {agentFeature.description}
-                  </p>
+                {/* active marker rail */}
+                <span
+                  className={cn(
+                    'absolute left-0 top-0 h-full w-[3px] transition-colors duration-500',
+                    activeIndex === index ? 'bg-signal' : 'bg-transparent'
+                  )}
+                />
+
+                <div className="mb-6 flex items-baseline justify-between">
+                  <span className="font-display text-5xl font-extrabold leading-none text-muted-foreground/25">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span
+                    className={cn(
+                      'border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors duration-500',
+                      activeIndex === index
+                        ? 'border-signal/50 text-signal'
+                        : 'border-border text-muted-foreground'
+                    )}
+                  >
+                    {agent.code}
+                  </span>
                 </div>
 
-                <div className="space-y-3 border-t border-border bg-muted/20 p-8">
-                  <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
-                    Highlights
-                  </h4>
+                <h3 className="font-display text-2xl font-bold uppercase tracking-tight">
+                  {agent.name}
+                </h3>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {agent.description}
+                </p>
 
-                  {agentFeature.features.map((feature) => (
-                    <div key={feature.title} className="flex items-start gap-3">
+                <ul className="mt-7 space-y-2.5 border-t border-border pt-6">
+                  {agent.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5">
                       <Check
                         weight="bold"
                         className={cn(
-                          'mt-0.5 h-4 w-4 flex-shrink-0 transition-colors',
-                          activeIndex === index ? 'text-red-400' : 'text-emerald-400/80'
+                          'mt-0.5 h-3.5 w-3.5 flex-shrink-0 transition-colors duration-500',
+                          activeIndex === index
+                            ? 'text-signal'
+                            : 'text-muted-foreground/60'
                         )}
                       />
-                      <div>
-                        <span className="text-sm text-foreground/90">
-                          {feature.title}
-                        </span>
-                        {feature.description && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {feature.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                      <span className="font-mono text-xs leading-relaxed text-foreground/80">
+                        {feature}
+                      </span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ))}
           </div>
 
           <div
             id="install"
-            className="flex flex-col items-center gap-4 mt-8 w-full max-w-xl"
+            className="mt-20 flex w-full max-w-xl flex-col items-center gap-4"
           >
-            <h3 className="text-2xl font-bold tracking-tighter text-center">
-              Get started in seconds
+            <h3 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+              Cleared in seconds
             </h3>
-            <p className="text-muted-foreground text-center">
-              Scaffold the GitHub Action workflow, then add your provider API key as a
-              repo secret.
+            <p className="text-center text-muted-foreground">
+              Scaffold the GitHub Action, add your provider key as a repo secret, ship.
             </p>
             <ShellCommand command="npx shippie init" />
-            <p className="text-sm text-muted-foreground text-center">
-              Prefer to try it locally first? Run{' '}
-              <code className="font-mono text-foreground">npx shippie review</code> to
-              review your staged changes.
+            <p className="text-center font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground/70">
+              Or run <span className="text-foreground/80">npx shippie review</span> on
+              your staged changes
             </p>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 

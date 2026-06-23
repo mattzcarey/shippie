@@ -169,7 +169,7 @@ const CustomNavbar = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`relative text-neutral-600 dark:text-neutral-300 ${
                   activeSection === item.link.substring(1)
-                    ? 'font-medium text-blue-600 dark:text-blue-400'
+                    ? 'font-medium text-signal'
                     : ''
                 }`}
               >

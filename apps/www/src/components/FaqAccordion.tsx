@@ -7,22 +7,22 @@ import {
 
 const FaqAccordion = () => {
   return (
-    <div id="faq" className="w-full">
-      <div className="container mx-auto">
-        <div className="flex gap-8 py-20 lg:py-32 items-center justify-center flex-col">
-          <div className="flex gap-4 flex-col">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-center">
-              Frequently Asked Questions
+    <div id="faq" className="w-full border-t border-border/60">
+      <div className="container mx-auto px-6">
+        <div className="flex gap-8 py-24 lg:py-32 items-center justify-center flex-col">
+          <div className="flex flex-col items-center text-center">
+            <span className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-signal">
+              The fine print
+            </span>
+            <h2 className="font-display text-[clamp(2.25rem,5vw,3.75rem)] font-extrabold uppercase leading-[0.92] tracking-tight">
+              Questions, answered
             </h2>
-            <p className="text-lg leading-relaxed tracking-tight text-muted-foreground max-w-2xl text-center mx-auto">
-              Find answers to common questions about Shippie
-            </p>
           </div>
 
-          <div className="w-full max-w-3xl mx-auto mt-8">
-            <Accordion type="single" collapsible className="w-full space-y-4 text-sm">
+          <div className="w-full max-w-3xl mx-auto mt-6">
+            <Accordion type="single" collapsible className="w-full space-y-3 text-sm">
               <AccordionItem
-                className="rounded border bg-primary-foreground px-4"
+                className="border border-border bg-card/40 px-5 transition-colors hover:border-border/80"
                 value="item-1"
               >
                 <AccordionTrigger>What is Shippie?</AccordionTrigger>
@@ -35,7 +35,7 @@ const FaqAccordion = () => {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem
-                className="rounded border bg-primary-foreground px-4"
+                className="border border-border bg-card/40 px-5 transition-colors hover:border-border/80"
                 value="item-2"
               >
                 <AccordionTrigger>How do I run it?</AccordionTrigger>
@@ -49,7 +49,7 @@ const FaqAccordion = () => {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem
-                className="rounded border bg-primary-foreground px-4"
+                className="border border-border bg-card/40 px-5 transition-colors hover:border-border/80"
                 value="item-3"
               >
                 <AccordionTrigger>Which AI providers does it support?</AccordionTrigger>
@@ -60,7 +60,7 @@ const FaqAccordion = () => {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem
-                className="rounded border bg-primary-foreground px-4"
+                className="border border-border bg-card/40 px-5 transition-colors hover:border-border/80"
                 value="item-4"
               >
                 <AccordionTrigger>
@@ -73,7 +73,7 @@ const FaqAccordion = () => {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem
-                className="rounded border bg-primary-foreground px-4"
+                className="border border-border bg-card/40 px-5 transition-colors hover:border-border/80"
                 value="item-5"
               >
                 <AccordionTrigger>Is Shippie open source?</AccordionTrigger>
