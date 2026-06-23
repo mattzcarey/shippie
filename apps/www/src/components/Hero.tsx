@@ -12,6 +12,11 @@ const Hero = () => {
     () => ['pull request', 'merge', 'commit', 'release', 'staged diff'],
     []
   )
+  // Reserve space for the widest word so the line never reflows as it rotates.
+  const longestTitle = useMemo(
+    () => titles.reduce((a, b) => (b.length >= a.length ? b : a), ''),
+    [titles]
+  )
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -43,25 +48,23 @@ const Hero = () => {
           <div className="flex gap-4 flex-col">
             <h1 className="text-5xl md:text-7xl max-w-3xl tracking-tighter text-center font-regular">
               <span className="font-semibold">AI code review</span>
-              <span className="block text-muted-foreground text-3xl md:text-5xl mt-2">
-                on every{' '}
-                <span className="relative inline-flex h-[1.3em] min-w-[7ch] justify-center text-center align-bottom">
+              <span className="mt-2 flex flex-wrap items-baseline justify-center gap-x-3 text-3xl text-muted-foreground md:text-5xl">
+                <span>on every</span>
+                <span className="relative inline-block whitespace-nowrap text-left font-semibold text-red-500">
+                  {/* invisible sizer reserves the widest word's width + the baseline */}
+                  <span className="invisible" aria-hidden="true">
+                    {longestTitle}
+                  </span>
                   {titles.map((title, index) => (
                     <motion.span
                       key={title}
-                      className="absolute font-semibold text-red-500 whitespace-nowrap"
-                      initial={{ opacity: 0, y: '-100' }}
+                      className="absolute left-0 top-0 whitespace-nowrap"
+                      initial={{ opacity: 0, y: 40 }}
                       transition={{ type: 'spring', stiffness: 50 }}
                       animate={
                         titleNumber === index
-                          ? {
-                              y: 0,
-                              opacity: 1,
-                            }
-                          : {
-                              y: titleNumber > index ? -150 : 150,
-                              opacity: 0,
-                            }
+                          ? { y: 0, opacity: 1 }
+                          : { y: titleNumber > index ? -40 : 40, opacity: 0 }
                       }
                     >
                       {title}
@@ -71,11 +74,8 @@ const Hero = () => {
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl leading-relaxed tracking-tight text-muted-foreground max-w-2xl text-center mt-4">
-              Shippie is an extendable, open-source code review agent. It reads your
-              diff, explores the codebase with real developer tools, and posts focused
-              inline review comments — catching the bugs, secrets, and missing tests a
-              human reviewer would.
+            <p className="mt-4 max-w-xl text-center text-lg leading-relaxed tracking-tight text-muted-foreground md:text-2xl">
+              Bugs, leaked secrets, missing tests — caught before they merge.
             </p>
           </div>
 
