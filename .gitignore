@@ -5,6 +5,14 @@ dist
 **/.cache/*.ts
 !jest.config.js
 *.d.ts
+# apps/* are Cloudflare Workers; their generated env types are committed + referenced by tsconfig
+!apps/**/worker-configuration.d.ts
+
+# Cloudflare / wrangler (apps/*)
+.wrangler
+.turbo
+.dev.vars
+.dev.vars.*
 
 **/data
 

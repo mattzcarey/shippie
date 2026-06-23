@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "target": "es2022",
+        "lib": ["ES2022", "DOM"],
+        "types": ["vite/client", "node", "react", "./worker-configuration.d.ts"],
+        "jsx": "react-jsx",
+        "module": "es2022",
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "allowJs": true,
+        "checkJs": false,
+        "noEmit": true,
+        "isolatedModules": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noUncheckedSideEffectImports": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./src/*"]
+        }
+    },
+    "include": ["src", "worker", "worker-configuration.d.ts"]
+}
