@@ -2,8 +2,8 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { FORMATTING } from '../../common/formatting/summary'
-import type { ReviewConfig } from '../../review/config'
+import { FORMATTING } from '../../src/common/formatting/summary'
+import type { ReviewConfig } from '../../src/review/config'
 
 const mockClient = {
   rest: {
@@ -27,7 +27,7 @@ const mockClient = {
 
 vi.mock('octokit', () => ({ Octokit: vi.fn(() => mockClient) }))
 
-import { createReporter } from '../reporter'
+import { createReporter } from '../../src/github/reporter'
 
 const baseGithubConfig = (workspace: string): ReviewConfig => ({
   platform: 'github',

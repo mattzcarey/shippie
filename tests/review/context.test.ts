@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildReviewPrompt } from '../context'
-import type { ReviewFileWithDiff } from '../diff'
+import { buildReviewPrompt } from '../../src/review/context'
+import type { ReviewFileWithDiff } from '../../src/review/diff'
 
 const WS = '/repo'
 

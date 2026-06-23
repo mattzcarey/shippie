@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import type { ReviewFile } from '../../../common/types'
-import { filterFiles } from '../filterFiles'
+import type { ReviewFile } from '../../../src/common/types'
+import { filterFiles } from '../../../src/review/utils/filterFiles'
 
 describe('filterFiles unit test', () => {
   test('uses default ignored globs when no globs provided', () => {

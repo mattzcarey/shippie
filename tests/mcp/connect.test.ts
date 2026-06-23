@@ -1,7 +1,7 @@
 import type { ToolDefinition } from '@flue/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { McpServerInput } from '../../review/config'
-import { connectMcpServers } from '../connect'
+import type { McpServerInput } from '../../src/review/config'
+import { connectMcpServers } from '../../src/mcp/connect'
 
 const { connectMcpServer } = vi.hoisted(() => ({ connectMcpServer: vi.fn() }))
 
