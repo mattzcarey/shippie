@@ -1,227 +1,201 @@
 # Changelog
 
-## [0.21.0](https://github.com/mattzcarey/shippie/compare/v0.20.0...v0.21.0) (2026-06-22)
+## 0.21.1
 
+### Patch Changes
+
+- [#473](https://github.com/mattzcarey/shippie/pull/473) [`3ee1b4b`](https://github.com/mattzcarey/shippie/commit/3ee1b4bbc8da09a2d52bcfef6f6685d1c07762bd) Thanks [@mattzcarey](https://github.com/mattzcarey)! - Trim published package to dist + bin; switch release tooling to Changesets with npm provenance + OIDC trusted publishing
+
+## [0.21.0](https://github.com/mattzcarey/shippie/compare/v0.20.0...v0.21.0) (2026-06-22)
 
 ### ⚠ BREAKING CHANGES
 
-* rebuild shippie as a prebuilt agent on flue ([#470](https://github.com/mattzcarey/shippie/issues/470))
+- rebuild shippie as a prebuilt agent on flue ([#470](https://github.com/mattzcarey/shippie/issues/470))
 
 ### Features
 
-* rebuild shippie as a prebuilt agent on flue ([#470](https://github.com/mattzcarey/shippie/issues/470)) ([f6a2878](https://github.com/mattzcarey/shippie/commit/f6a2878218509a432ab6464d86c650d32447ffad))
+- rebuild shippie as a prebuilt agent on flue ([#470](https://github.com/mattzcarey/shippie/issues/470)) ([f6a2878](https://github.com/mattzcarey/shippie/commit/f6a2878218509a432ab6464d86c650d32447ffad))
 
 ## [0.20.0](https://github.com/mattzcarey/shippie/compare/v0.19.0...v0.20.0) (2025-08-01)
 
-
 ### Features
 
-* add support for root-level rules files and deduplication ([#457](https://github.com/mattzcarey/shippie/issues/457)) ([511680e](https://github.com/mattzcarey/shippie/commit/511680e8d2b43a9902df06194423d5afd1398486))
+- add support for root-level rules files and deduplication ([#457](https://github.com/mattzcarey/shippie/issues/457)) ([511680e](https://github.com/mattzcarey/shippie/commit/511680e8d2b43a9902df06194423d5afd1398486))
 
 ## [0.19.0](https://github.com/mattzcarey/shippie/compare/v0.18.0...v0.19.0) (2025-07-31)
 
-
 ### Features
 
-* **models:** Add Github Models support ([#456](https://github.com/mattzcarey/shippie/issues/456)) ([f2e4e45](https://github.com/mattzcarey/shippie/commit/f2e4e4549f0786d4aa927f81b5198843865ae3b9))
-
+- **models:** Add Github Models support ([#456](https://github.com/mattzcarey/shippie/issues/456)) ([f2e4e45](https://github.com/mattzcarey/shippie/commit/f2e4e4549f0786d4aa927f81b5198843865ae3b9))
 
 ### Bug Fixes
 
-* claude code workflow ([2b8ab84](https://github.com/mattzcarey/shippie/commit/2b8ab84506bb3cd5bc9988ce7bb6f9217a05ac24))
+- claude code workflow ([2b8ab84](https://github.com/mattzcarey/shippie/commit/2b8ab84506bb3cd5bc9988ce7bb6f9217a05ac24))
 
 ## [0.18.0](https://github.com/mattzcarey/shippie/compare/v0.17.1...v0.18.0) (2025-06-08)
 
-
 ### Features
 
-* sub agent ([#446](https://github.com/mattzcarey/shippie/issues/446)) ([b1b2651](https://github.com/mattzcarey/shippie/commit/b1b2651e7ae2fd4752eb602647e4c5832e106392))
-* **testing:** scenario-based E2E testing framework ([#450](https://github.com/mattzcarey/shippie/issues/450)) ([1e423be](https://github.com/mattzcarey/shippie/commit/1e423be35b9d30a3220f4c01082a8832a9caae9a))
+- sub agent ([#446](https://github.com/mattzcarey/shippie/issues/446)) ([b1b2651](https://github.com/mattzcarey/shippie/commit/b1b2651e7ae2fd4752eb602647e4c5832e106392))
+- **testing:** scenario-based E2E testing framework ([#450](https://github.com/mattzcarey/shippie/issues/450)) ([1e423be](https://github.com/mattzcarey/shippie/commit/1e423be35b9d30a3220f4c01082a8832a9caae9a))
 
 ## [0.17.1](https://github.com/mattzcarey/shippie/compare/v0.17.0...v0.17.1) (2025-06-02)
 
-
 ### Bug Fixes
 
-* re-add support for azure openai ([#444](https://github.com/mattzcarey/shippie/issues/444)) ([2c850b5](https://github.com/mattzcarey/shippie/commit/2c850b5f1ab672ebda9a32e16f57c88f228700f8))
+- re-add support for azure openai ([#444](https://github.com/mattzcarey/shippie/issues/444)) ([2c850b5](https://github.com/mattzcarey/shippie/commit/2c850b5f1ab672ebda9a32e16f57c88f228700f8))
 
 ## [0.17.0](https://github.com/mattzcarey/shippie/compare/v0.16.0...v0.17.0) (2025-05-28)
 
-
 ### Features
 
-* support for custom file endings ([#442](https://github.com/mattzcarey/shippie/issues/442)) ([8198fa3](https://github.com/mattzcarey/shippie/commit/8198fa35696653819e1c58b76aff4f14915f08e1))
+- support for custom file endings ([#442](https://github.com/mattzcarey/shippie/issues/442)) ([8198fa3](https://github.com/mattzcarey/shippie/commit/8198fa35696653819e1c58b76aff4f14915f08e1))
 
 ## [0.16.0](https://github.com/mattzcarey/shippie/compare/v0.15.0...v0.16.0) (2025-05-25)
 
-
 ### Features
 
-* **prompt sizes:** Update model info ([#438](https://github.com/mattzcarey/shippie/issues/438)) ([bc08b6d](https://github.com/mattzcarey/shippie/commit/bc08b6d159091e1ab92c7349afce92c113f68f61))
+- **prompt sizes:** Update model info ([#438](https://github.com/mattzcarey/shippie/issues/438)) ([bc08b6d](https://github.com/mattzcarey/shippie/commit/bc08b6d159091e1ab92c7349afce92c113f68f61))
 
 ## [0.15.0](https://github.com/mattzcarey/shippie/compare/v0.14.3...v0.15.0) (2025-05-23)
 
-
 ### Features
 
-* use context from rules ([#435](https://github.com/mattzcarey/shippie/issues/435)) ([066cd64](https://github.com/mattzcarey/shippie/commit/066cd64d5fc4d03d6a60d5451470aec50f219002))
+- use context from rules ([#435](https://github.com/mattzcarey/shippie/issues/435)) ([066cd64](https://github.com/mattzcarey/shippie/commit/066cd64d5fc4d03d6a60d5451470aec50f219002))
 
 ## [0.14.3](https://github.com/mattzcarey/shippie/compare/v0.14.2...v0.14.3) (2025-05-22)
 
-
 ### Bug Fixes
 
-* **action.yml:** action hates a frozen lockfile ([#431](https://github.com/mattzcarey/shippie/issues/431)) ([3d699a6](https://github.com/mattzcarey/shippie/commit/3d699a67cefe5e301f54b7c210f1890cf9e946ec))
+- **action.yml:** action hates a frozen lockfile ([#431](https://github.com/mattzcarey/shippie/issues/431)) ([3d699a6](https://github.com/mattzcarey/shippie/commit/3d699a67cefe5e301f54b7c210f1890cf9e946ec))
 
 ## [0.14.2](https://github.com/mattzcarey/shippie/compare/v0.14.1...v0.14.2) (2025-05-21)
 
-
 ### Bug Fixes
 
-* **cicd:** action.yml tested on pull request ([#428](https://github.com/mattzcarey/shippie/issues/428)) ([ae53718](https://github.com/mattzcarey/shippie/commit/ae537189b124584a66d03f66c3af0ce41675f75f))
+- **cicd:** action.yml tested on pull request ([#428](https://github.com/mattzcarey/shippie/issues/428)) ([ae53718](https://github.com/mattzcarey/shippie/commit/ae537189b124584a66d03f66c3af0ce41675f75f))
 
 ## [0.14.1](https://github.com/mattzcarey/shippie/compare/v0.14.0...v0.14.1) (2025-05-21)
 
-
 ### Bug Fixes
 
-* base url default to empty string in action.yml ([#426](https://github.com/mattzcarey/shippie/issues/426)) ([36653b7](https://github.com/mattzcarey/shippie/commit/36653b7c48bfd57f7a4bfb4655fb9da3d43b212a))
+- base url default to empty string in action.yml ([#426](https://github.com/mattzcarey/shippie/issues/426)) ([36653b7](https://github.com/mattzcarey/shippie/commit/36653b7c48bfd57f7a4bfb4655fb9da3d43b212a))
 
 ## [0.14.0](https://github.com/mattzcarey/shippie/compare/v0.13.0...v0.14.0) (2025-05-12)
 
-
 ### Features
 
-* **cli:** move to tsup ([#421](https://github.com/mattzcarey/shippie/issues/421)) ([4a55214](https://github.com/mattzcarey/shippie/commit/4a55214e95a4017975736d67dd6732046ef0d648))
+- **cli:** move to tsup ([#421](https://github.com/mattzcarey/shippie/issues/421)) ([4a55214](https://github.com/mattzcarey/shippie/commit/4a55214e95a4017975736d67dd6732046ef0d648))
 
 ## [0.13.0](https://github.com/mattzcarey/shippie/compare/v0.12.2...v0.13.0) (2025-05-12)
 
-
 ### Features
 
-* some basic telemetry data ([#416](https://github.com/mattzcarey/shippie/issues/416)) ([10676a8](https://github.com/mattzcarey/shippie/commit/10676a877e92addccdd59ca676027d506a8cef74))
-* thinking tool ([#418](https://github.com/mattzcarey/shippie/issues/418)) ([8aa4a5e](https://github.com/mattzcarey/shippie/commit/8aa4a5eb40a892c95a5bddc92c3210565369afc9))
-* **tools:** mcp client and client manager ([#419](https://github.com/mattzcarey/shippie/issues/419)) ([3ad39b2](https://github.com/mattzcarey/shippie/commit/3ad39b26f7c26c040d6cf2dd55fa8c0e11d87671))
+- some basic telemetry data ([#416](https://github.com/mattzcarey/shippie/issues/416)) ([10676a8](https://github.com/mattzcarey/shippie/commit/10676a877e92addccdd59ca676027d506a8cef74))
+- thinking tool ([#418](https://github.com/mattzcarey/shippie/issues/418)) ([8aa4a5e](https://github.com/mattzcarey/shippie/commit/8aa4a5eb40a892c95a5bddc92c3210565369afc9))
+- **tools:** mcp client and client manager ([#419](https://github.com/mattzcarey/shippie/issues/419)) ([3ad39b2](https://github.com/mattzcarey/shippie/commit/3ad39b26f7c26c040d6cf2dd55fa8c0e11d87671))
 
 ## [0.12.2](https://github.com/mattzcarey/shippie/compare/v0.12.1...v0.12.2) (2025-05-12)
 
-
 ### Bug Fixes
 
-* **action:** add debug argument ([#411](https://github.com/mattzcarey/shippie/issues/411)) ([e24ed7f](https://github.com/mattzcarey/shippie/commit/e24ed7ff94cc0e56f752e02b2da35be14299257a))
+- **action:** add debug argument ([#411](https://github.com/mattzcarey/shippie/issues/411)) ([e24ed7f](https://github.com/mattzcarey/shippie/commit/e24ed7ff94cc0e56f752e02b2da35be14299257a))
 
 ## [0.12.1](https://github.com/mattzcarey/shippie/compare/v0.12.0...v0.12.1) (2025-05-12)
 
-
 ### Bug Fixes
 
-* **cicd:** npm token ([#414](https://github.com/mattzcarey/shippie/issues/414)) ([a72f00d](https://github.com/mattzcarey/shippie/commit/a72f00d9dd630b541d511f20682cbdfe6f4f514b))
-* **review:** use node fs for readFile tool ([#412](https://github.com/mattzcarey/shippie/issues/412)) ([75f083f](https://github.com/mattzcarey/shippie/commit/75f083fd44952d22a046f00960cb66853c785561))
+- **cicd:** npm token ([#414](https://github.com/mattzcarey/shippie/issues/414)) ([a72f00d](https://github.com/mattzcarey/shippie/commit/a72f00d9dd630b541d511f20682cbdfe6f4f514b))
+- **review:** use node fs for readFile tool ([#412](https://github.com/mattzcarey/shippie/issues/412)) ([75f083f](https://github.com/mattzcarey/shippie/commit/75f083fd44952d22a046f00960cb66853c785561))
 
 ## [0.12.0](https://github.com/mattzcarey/shippie/compare/v0.11.0...v0.12.0) (2025-04-30)
 
-
 ### Features
 
-* azure ai provider ([#409](https://github.com/mattzcarey/shippie/issues/409)) ([69e9d43](https://github.com/mattzcarey/shippie/commit/69e9d43310d54ea646740e73aa08b8d1076e4a73))
+- azure ai provider ([#409](https://github.com/mattzcarey/shippie/issues/409)) ([69e9d43](https://github.com/mattzcarey/shippie/commit/69e9d43310d54ea646740e73aa08b8d1076e4a73))
 
 ## [0.11.0](https://github.com/mattzcarey/shippie/compare/v0.10.0...v0.11.0) (2025-04-29)
 
-
 ### Features
 
-* add usage stats ([#407](https://github.com/mattzcarey/shippie/issues/407)) ([f075aa9](https://github.com/mattzcarey/shippie/commit/f075aa9a818b9b99388c1fb8cb344159487a0f29))
+- add usage stats ([#407](https://github.com/mattzcarey/shippie/issues/407)) ([f075aa9](https://github.com/mattzcarey/shippie/commit/f075aa9a818b9b99388c1fb8cb344159487a0f29))
 
 ## [0.10.0](https://github.com/mattzcarey/shippie/compare/v0.9.0...v0.10.0) (2025-04-28)
 
-
 ### Features
 
-* rename to shippie ([#405](https://github.com/mattzcarey/shippie/issues/405)) ([5abf3f2](https://github.com/mattzcarey/shippie/commit/5abf3f234319fdb7edfabacd1166bd8bd1ae2b09))
+- rename to shippie ([#405](https://github.com/mattzcarey/shippie/issues/405)) ([5abf3f2](https://github.com/mattzcarey/shippie/commit/5abf3f234319fdb7edfabacd1166bd8bd1ae2b09))
 
 ## [0.9.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.8.0...v0.9.0) (2025-04-28)
 
-
 ### Features
 
-* check pr title workflow ([#403](https://github.com/mattzcarey/code-review-gpt/issues/403)) ([c7edf3b](https://github.com/mattzcarey/code-review-gpt/commit/c7edf3b983fbaeeb38fb06266f3f3aab81106275))
+- check pr title workflow ([#403](https://github.com/mattzcarey/code-review-gpt/issues/403)) ([c7edf3b](https://github.com/mattzcarey/code-review-gpt/commit/c7edf3b983fbaeeb38fb06266f3f3aab81106275))
 
 ## [0.8.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.7.0...v0.8.0) (2025-02-23)
 
-
 ### Features
 
-* Add C lang ([#390](https://github.com/mattzcarey/code-review-gpt/issues/390)) ([7cb838f](https://github.com/mattzcarey/code-review-gpt/commit/7cb838f352dfeea5b32d3280f0837f4b5333dc22))
-
+- Add C lang ([#390](https://github.com/mattzcarey/code-review-gpt/issues/390)) ([7cb838f](https://github.com/mattzcarey/code-review-gpt/commit/7cb838f352dfeea5b32d3280f0837f4b5333dc22))
 
 ### Bug Fixes
 
-* annoying spelling ([5d0c096](https://github.com/mattzcarey/code-review-gpt/commit/5d0c09690e255d5142784228a1578e239abe0fb3))
+- annoying spelling ([5d0c096](https://github.com/mattzcarey/code-review-gpt/commit/5d0c09690e255d5142784228a1578e239abe0fb3))
 
 ## [0.7.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.6.0...v0.7.0) (2025-02-20)
 
-
 ### Features
 
-* add support for arbitrary OpenAI compatible APIs ([#383](https://github.com/mattzcarey/code-review-gpt/issues/383)) ([4bf0bda](https://github.com/mattzcarey/code-review-gpt/commit/4bf0bda142b54bacfe4df8cab1f4bd7ec3f7803c))
+- add support for arbitrary OpenAI compatible APIs ([#383](https://github.com/mattzcarey/code-review-gpt/issues/383)) ([4bf0bda](https://github.com/mattzcarey/code-review-gpt/commit/4bf0bda142b54bacfe4df8cab1f4bd7ec3f7803c))
 
 ## [0.6.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.5.0...v0.6.0) (2025-01-28)
 
-
 ### Features
 
-* **azure:** Add support for azure open Ai ([#377](https://github.com/mattzcarey/code-review-gpt/issues/377)) ([989c26a](https://github.com/mattzcarey/code-review-gpt/commit/989c26ae511ef35f03545a836f00984979a9a673))
-* use picocolors and tinyglobby and biome check fix  ([#375](https://github.com/mattzcarey/code-review-gpt/issues/375)) ([760e830](https://github.com/mattzcarey/code-review-gpt/commit/760e830e200f7d88687b3b3e79497efe9badc058))
-
+- **azure:** Add support for azure open Ai ([#377](https://github.com/mattzcarey/code-review-gpt/issues/377)) ([989c26a](https://github.com/mattzcarey/code-review-gpt/commit/989c26ae511ef35f03545a836f00984979a9a673))
+- use picocolors and tinyglobby and biome check fix ([#375](https://github.com/mattzcarey/code-review-gpt/issues/375)) ([760e830](https://github.com/mattzcarey/code-review-gpt/commit/760e830e200f7d88687b3b3e79497efe9badc058))
 
 ### Bug Fixes
 
-* release-package workflow ([e7cb470](https://github.com/mattzcarey/code-review-gpt/commit/e7cb470b72f7023593759a925a652bf50ed165c6))
+- release-package workflow ([e7cb470](https://github.com/mattzcarey/code-review-gpt/commit/e7cb470b72f7023593759a925a652bf50ed165c6))
 
 ## [0.5.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.4.0...v0.5.0) (2025-01-14)
 
-
 ### Features
 
-* update review prompt to focus on negative aspects of code ([#371](https://github.com/mattzcarey/code-review-gpt/issues/371)) ([66a6208](https://github.com/mattzcarey/code-review-gpt/commit/66a6208a36367dc1fe3705f12c96e0612a6186b0))
-
+- update review prompt to focus on negative aspects of code ([#371](https://github.com/mattzcarey/code-review-gpt/issues/371)) ([66a6208](https://github.com/mattzcarey/code-review-gpt/commit/66a6208a36367dc1fe3705f12c96e0612a6186b0))
 
 ### Bug Fixes
 
-* escape file names in git diff commands for better compatibility ([#370](https://github.com/mattzcarey/code-review-gpt/issues/370)) ([c99cd02](https://github.com/mattzcarey/code-review-gpt/commit/c99cd02a70a46abed54b930ce42d5b352781fcde))
+- escape file names in git diff commands for better compatibility ([#370](https://github.com/mattzcarey/code-review-gpt/issues/370)) ([c99cd02](https://github.com/mattzcarey/code-review-gpt/commit/c99cd02a70a46abed54b930ce42d5b352781fcde))
 
 ## [0.4.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.3.0...v0.4.0) (2025-01-12)
 
-
 ### Features
 
-* use bun for bundling ([159e2db](https://github.com/mattzcarey/code-review-gpt/commit/159e2dbd398b36156e18e7a79dce2fa84a53abb8))
+- use bun for bundling ([159e2db](https://github.com/mattzcarey/code-review-gpt/commit/159e2dbd398b36156e18e7a79dce2fa84a53abb8))
 
 ## [0.3.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.2.0...v0.3.0) (2025-01-12)
 
-
 ### Features
 
-* comment with no feedback ([c8b639a](https://github.com/mattzcarey/code-review-gpt/commit/c8b639a4e5046c26997783fbb47b3a395d55429b))
-
+- comment with no feedback ([c8b639a](https://github.com/mattzcarey/code-review-gpt/commit/c8b639a4e5046c26997783fbb47b3a395d55429b))
 
 ### Bug Fixes
 
-* lock file ([d900fef](https://github.com/mattzcarey/code-review-gpt/commit/d900fef027eb9644a913b5a626fc110f8ab386fc))
+- lock file ([d900fef](https://github.com/mattzcarey/code-review-gpt/commit/d900fef027eb9644a913b5a626fc110f8ab386fc))
 
 ## [0.2.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.1.10...v0.2.0) (2025-01-12)
 
-
 ### Features
 
-* Add support for o1-preview model ([#353](https://github.com/mattzcarey/code-review-gpt/issues/353)) ([d0d8f7d](https://github.com/mattzcarey/code-review-gpt/commit/d0d8f7db0d3e6208ca2f001ca3e8f221d7274e6b))
-* move to bun and structure output ([#364](https://github.com/mattzcarey/code-review-gpt/issues/364)) ([c042495](https://github.com/mattzcarey/code-review-gpt/commit/c0424952574493f2b35dc386e4d70f6425355407))
-
+- Add support for o1-preview model ([#353](https://github.com/mattzcarey/code-review-gpt/issues/353)) ([d0d8f7d](https://github.com/mattzcarey/code-review-gpt/commit/d0d8f7db0d3e6208ca2f001ca3e8f221d7274e6b))
+- move to bun and structure output ([#364](https://github.com/mattzcarey/code-review-gpt/issues/364)) ([c042495](https://github.com/mattzcarey/code-review-gpt/commit/c0424952574493f2b35dc386e4d70f6425355407))
 
 ### Bug Fixes
 
-* action.yml ([#365](https://github.com/mattzcarey/code-review-gpt/issues/365)) ([286aa0d](https://github.com/mattzcarey/code-review-gpt/commit/286aa0d7fe9fb0f7c91b34cde29500ccf29be2c8))
-* change gpt model naming ([#362](https://github.com/mattzcarey/code-review-gpt/issues/362)) ([263dc3d](https://github.com/mattzcarey/code-review-gpt/commit/263dc3df92c692d3edc059713cd4654002d2fd08))
+- action.yml ([#365](https://github.com/mattzcarey/code-review-gpt/issues/365)) ([286aa0d](https://github.com/mattzcarey/code-review-gpt/commit/286aa0d7fe9fb0f7c91b34cde29500ccf29be2c8))
+- change gpt model naming ([#362](https://github.com/mattzcarey/code-review-gpt/issues/362)) ([263dc3d](https://github.com/mattzcarey/code-review-gpt/commit/263dc3df92c692d3edc059713cd4654002d2fd08))
 
 ## [0.1.0](https://github.com/mattzcarey/code-review-gpt/compare/v0.0.34...v0.1.0) (2023-08-16)
 
