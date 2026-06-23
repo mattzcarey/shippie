@@ -29,9 +29,9 @@ const { mockClient } = vi.hoisted(() => {
 // Never touch the real GitHub API.
 vi.mock('octokit', () => ({ Octokit: vi.fn(() => mockClient) }))
 
-import { channel } from '../../channels/github'
-import mention from '../mention'
-import reviewer from '../reviewer'
+import { channel } from '../../src/channels/github'
+import mention from '../../src/agents/mention'
+import reviewer from '../../src/agents/reviewer'
 
 const toolNames = (tools: unknown): string[] =>
   Array.isArray(tools)

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import type { ReviewConfig } from '../config'
-import { buildDiffArgs, parseDiff } from '../diff'
+import type { ReviewConfig } from '../../src/review/config'
+import { buildDiffArgs, parseDiff } from '../../src/review/diff'
 
 const WS = '/repo'
 

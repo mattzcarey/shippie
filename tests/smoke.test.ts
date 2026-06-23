@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createReporter } from '../github/reporter'
-import type { ReviewConfig } from '../review/config'
-import * as reviewWorkflow from '../workflows/review'
+import { createReporter } from '../src/github/reporter'
+import type { ReviewConfig } from '../src/review/config'
+import * as reviewWorkflow from '../src/workflows/review'
 
 /**
  * Smoke / load-time crash tests.
@@ -54,19 +54,19 @@ describe('smoke: modules load without crashing when secrets are absent', () => {
   })
 
   it('imports the reviewer agent without throwing', async () => {
-    await expect(import('../agents/reviewer')).resolves.toBeDefined()
+    await expect(import('../src/agents/reviewer')).resolves.toBeDefined()
   })
 
   it('imports the review workflow without throwing', async () => {
-    await expect(import('../workflows/review')).resolves.toBeDefined()
+    await expect(import('../src/workflows/review')).resolves.toBeDefined()
   })
 
   it('imports the github channel without throwing (webhook secret unset)', async () => {
-    await expect(import('../channels/github')).resolves.toBeDefined()
+    await expect(import('../src/channels/github')).resolves.toBeDefined()
   })
 
   it('imports the mention agent without throwing', async () => {
-    await expect(import('../agents/mention')).resolves.toBeDefined()
+    await expect(import('../src/agents/mention')).resolves.toBeDefined()
   })
 })
 

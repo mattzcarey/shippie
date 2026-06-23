@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { type TelemetryInput, sendReviewStarted } from '../telemetry'
+import { type TelemetryInput, sendReviewStarted } from '../../src/common/telemetry'
 
 const TELEMETRY_URL = 'https://telemetry.shippie.dev/events'
 

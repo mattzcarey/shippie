@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { channel, commentOnIssue, getPullRequestDiff } from '../github'
+import { channel, commentOnIssue, getPullRequestDiff } from '../../src/channels/github'
 
 // `vi.hoisted` runs before the (hoisted) static imports, so the webhook secret
 // is set before the channel module loads as a live channel rather than the

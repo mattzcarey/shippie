@@ -10,7 +10,8 @@ anywhere flue deploys (Node, Cloudflare, GitHub Actions, GitLab CI).
 - `src/agents/reviewer.ts` — the review agent (`createAgent`): model, `local()` sandbox, instructions, and the `suggest_change` tool.
 - `src/workflows/review.ts` — the one-shot review workflow (`run({ init, payload, env })`); also exports `route` so the built server can serve `POST /workflows/review`.
 - `src/tools/suggest-change.ts` — `defineTool` for inline review comments.
-- `src/review/` — `config.ts` (resolve config from payload/env), `diff.ts` (git diff + parsing), `instructions.ts` (review prompt + AGENTS.md/CLAUDE.md injection), `context.ts` (prompt builder), `constants.ts`, `prompt/fileInfo.ts`, `utils/filterFiles.ts`, `specs/*` (tests).
+- `src/review/` — `config.ts` (resolve config from payload/env), `diff.ts` (git diff + parsing), `instructions.ts` (review prompt + AGENTS.md/CLAUDE.md injection), `context.ts` (prompt builder), `constants.ts`, `prompt/fileInfo.ts`, `utils/filterFiles.ts`.
+- `tests/` — vitest specs (`*.test.ts`), mirroring the `src/` layout (kept out of `src/` so the package code stays clean).
 - `src/github/reporter.ts` — posts inline comments + summary to GitHub (Octokit) or to a local file.
 - `src/mcp/connect.ts` — connects remote MCP servers from config.
 - `src/common/` — shared `types.ts` and `formatting/summary.ts`.

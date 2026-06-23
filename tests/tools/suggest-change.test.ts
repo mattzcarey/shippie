@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Reporter } from '../../github/reporter'
-import { createSuggestChangeTool } from '../suggest-change'
+import type { Reporter } from '../../src/github/reporter'
+import { createSuggestChangeTool } from '../../src/tools/suggest-change'
 
 const makeReporter = (postReviewComment: Reporter['postReviewComment']): Reporter => ({
   postReviewComment,

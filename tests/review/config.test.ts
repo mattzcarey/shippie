@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { resolveReviewConfig } from '../config'
+import { resolveReviewConfig } from '../../src/review/config'
 
 const env = (e: Record<string, string>) => e as unknown as NodeJS.ProcessEnv
 

@@ -3,25 +3,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // Mock only the collaborators that touch git, GitHub, or MCP transports.
 // `filterFiles` and `resolveReviewConfig` are exercised for real.
 const getChangedFiles = vi.fn()
-vi.mock('../../review/diff', async (orig) => ({
-  ...(await orig<typeof import('../../review/diff')>()),
+vi.mock('../../src/review/diff', async (orig) => ({
+  ...(await orig<typeof import('../../src/review/diff')>()),
   getChangedFiles: (...args: unknown[]) => getChangedFiles(...args),
 }))
 
 const postSummary = vi.fn().mockResolvedValue('http://s')
 const postReviewComment = vi.fn()
 const createReporter = vi.fn(() => ({ postSummary, postReviewComment }))
-vi.mock('../../github/reporter', () => ({
+vi.mock('../../src/github/reporter', () => ({
   createReporter: (...args: unknown[]) => createReporter(...args),
 }))
 
 const mcpClose = vi.fn().mockResolvedValue(undefined)
 const connectMcpServers = vi.fn().mockResolvedValue({ tools: [], close: mcpClose })
-vi.mock('../../mcp/connect', () => ({
+vi.mock('../../src/mcp/connect', () => ({
   connectMcpServers: (...args: unknown[]) => connectMcpServers(...args),
 }))
 
-import { run } from '../review'
+import { run } from '../../src/workflows/review'
 
 const PAYLOAD = { platform: 'local' as const, workspace: process.cwd(), ignore: [] }
 
