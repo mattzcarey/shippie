@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.2
+
+### Patch Changes
+
+- [#475](https://github.com/mattzcarey/shippie/pull/475) [`f7efb9d`](https://github.com/mattzcarey/shippie/commit/f7efb9dd9b790e74d784f583e24dac3290a59688) Thanks [@mattzcarey](https://github.com/mattzcarey)! - Fix `shippie review` crashing on a clean install with `[flue] Agent "mention" must default-export createAgent(...)`. The `@flue/*` dependencies were ranged with a caret (`^1.0.0-beta.1`), so installs floated to `@flue/runtime@1.0.0-beta.3`, whose `createAgent` marker (`__flueAgentDefinition`) no longer matches the validator bundled into `dist/server.mjs` (built against `beta.1`'s `__flueCreatedAgent`). Pin `@flue/runtime`, `@flue/github`, and `@flue/cli` to exact `1.0.0-beta.1` so the runtime installed by `npx`/the GitHub Action always matches the bundled build output.
+
 ## 0.21.1
 
 ### Patch Changes
