@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
 import { GithubLogo } from '@phosphor-icons/react'
+import { motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import { ShellCommand } from './ShellCommand'
 import { Button } from './ui/button'
@@ -34,12 +34,7 @@ const Hero = () => {
       <div className="container mx-auto">
         <div className="flex gap-8 py-20 pb-12 lg:py-32 lg:pb-16 items-center justify-center flex-col">
           <div>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="gap-2"
-              asChild
-            >
+            <Button variant="secondary" size="sm" className="gap-2" asChild>
               <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer">
                 <GithubLogo size={16} weight="fill" /> Open source on GitHub
               </a>

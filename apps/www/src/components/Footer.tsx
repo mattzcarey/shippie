@@ -11,11 +11,7 @@ const Footer = () => {
         <div className="flex flex-col gap-8 py-12 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-3">
             <a href="/" className="flex items-center gap-2">
-              <Rocket
-                size={24}
-                weight="fill"
-                className="text-black dark:text-white"
-              />
+              <Rocket size={24} weight="fill" className="text-black dark:text-white" />
               <span className="font-medium text-black dark:text-white">Shippie</span>
             </a>
             <p className="max-w-xs text-sm text-muted-foreground">
@@ -58,9 +54,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-gray-200 py-6 text-sm text-muted-foreground dark:border-neutral-800">
-          <p>
-            © {new Date().getFullYear()} Shippie · Open source under the MIT license.
-          </p>
+          <p>© {new Date().getFullYear()} Shippie · Open source under the MIT license.</p>
         </div>
       </div>
     </footer>

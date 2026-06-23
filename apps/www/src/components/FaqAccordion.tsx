@@ -63,7 +63,9 @@ const FaqAccordion = () => {
                 className="rounded border bg-primary-foreground px-4"
                 value="item-4"
               >
-                <AccordionTrigger>Can I extend Shippie with my own tools?</AccordionTrigger>
+                <AccordionTrigger>
+                  Can I extend Shippie with my own tools?
+                </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   Yes. Shippie acts as a Model Context Protocol (MCP) client, so you can
                   connect external tools — browser automation, observability, or
