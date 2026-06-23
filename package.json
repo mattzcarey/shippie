@@ -52,8 +52,8 @@
         "node": ">=22.19.0"
     },
     "dependencies": {
-        "@flue/github": "^1.0.0-beta.1",
-        "@flue/runtime": "^1.0.0-beta.1",
+        "@flue/github": "1.0.0-beta.1",
+        "@flue/runtime": "1.0.0-beta.1",
         "octokit": "^3.1.0",
         "picomatch": "^4.0.2",
         "valibot": "^1.4.1"
@@ -62,7 +62,7 @@
         "@biomejs/biome": "^1.9.4",
         "@changesets/changelog-github": "^0.7.0",
         "@changesets/cli": "^2.31.0",
-        "@flue/cli": "^1.0.0-beta.1",
+        "@flue/cli": "1.0.0-beta.1",
         "@types/node": "^22.10.0",
         "@types/picomatch": "^4.0.0",
         "typescript": "^5.1.6",
@@ -72,8 +72,5 @@
         "hono": "^4.12.26",
         "esbuild": "^0.28.1"
     },
-    "files": [
-        "dist",
-        "bin"
-    ]
+    "files": ["dist", "bin"]
 }
