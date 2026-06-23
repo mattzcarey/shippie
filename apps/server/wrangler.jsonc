@@ -1,0 +1,26 @@
+{
+    "name": "shippie-telemetry",
+    "main": "src/index.ts",
+    "compatibility_date": "2025-04-04",
+    "observability": {
+        "enabled": true
+    },
+    // "r2_buckets": [
+    //     {
+    //         "bucket_name": "shippie-events",
+    //         "binding": "shippie_events"
+    //     }
+    // ],
+    "pipelines": [
+        {
+            "pipeline": "shippie-telemetry",
+            "binding": "TELEMETRY_PIPELINE"
+        }
+    ],
+    "routes": [
+        {
+            "pattern": "telemetry.shippie.dev",
+            "custom_domain": true
+        }
+    ]
+}

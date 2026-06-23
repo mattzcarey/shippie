@@ -1,0 +1,23 @@
+{
+    "name": "@shippie/server",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "scripts": {
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy",
+        "types": "wrangler types",
+        "check": "biome check",
+        "check:fix": "biome check --fix"
+    },
+    "dependencies": {
+        "@hono/zod-validator": "^0.5.0",
+        "hono": "^4.7.9",
+        "zod": "^3.24.4"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "typescript": "^5.7.2",
+        "wrangler": "^4.14.1"
+    }
+}

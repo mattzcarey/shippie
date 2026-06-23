@@ -1,0 +1,15 @@
+{
+    "name": "shippie-www",
+    "main": "worker/index.ts",
+    "compatibility_date": "2025-04-04",
+    "assets": { "not_found_handling": "single-page-application" },
+    "observability": {
+        "enabled": true
+    },
+    "routes": [
+        {
+            "pattern": "shippie.dev",
+            "custom_domain": true
+        }
+    ]
+}

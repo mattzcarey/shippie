@@ -11,6 +11,7 @@
         "type": "git",
         "url": "https://github.com/mattzcarey/shippie"
     },
+    "workspaces": ["apps/*"],
     "scripts": {
         "review": "flue run review --target node",
         "dev": "flue dev --target node",
