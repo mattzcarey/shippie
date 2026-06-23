@@ -127,7 +127,7 @@ export const NavItems = ({
         <a
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className={`relative px-4 py-2 ${activeSection === item.link.substring(1) ? 'font-medium text-blue-600 dark:text-blue-400' : 'text-neutral-600 dark:text-neutral-300'}`}
+          className={`relative px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] ${activeSection === item.link.substring(1) ? 'font-semibold text-signal' : 'text-muted-foreground hover:text-foreground'}`}
           key={item.link}
           href={item.link}
         >
@@ -234,12 +234,10 @@ export const NavbarButton = ({
     'px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center'
 
   const variantStyles = {
-    primary:
-      'shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]',
-    secondary: 'bg-transparent shadow-none dark:text-white',
-    dark: 'bg-black text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]',
-    gradient:
-      'bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]',
+    primary: 'bg-signal text-signal-foreground font-semibold hover:brightness-110',
+    secondary: 'bg-transparent shadow-none text-foreground',
+    dark: 'bg-black text-white',
+    gradient: 'bg-signal text-signal-foreground',
   }
 
   return (

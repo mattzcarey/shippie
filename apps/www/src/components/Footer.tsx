@@ -1,60 +1,56 @@
-import { GithubLogo, Rocket } from '@phosphor-icons/react'
+import { Anchor, GithubLogo } from '@phosphor-icons/react'
 
 const GITHUB_REPO = 'https://github.com/mattzcarey/shippie'
 const DOCS_URL = 'https://github.com/mattzcarey/shippie/tree/main/docs'
 const NPM_URL = 'https://www.npmjs.com/package/shippie'
 
+const links = [
+  { label: 'GitHub', href: GITHUB_REPO, external: true },
+  { label: 'Docs', href: DOCS_URL, external: true },
+  { label: 'npm', href: NPM_URL, external: true },
+  { label: 'FAQ', href: '#faq', external: false },
+]
+
 const Footer = () => {
   return (
-    <footer className="w-full border-t border-gray-200 dark:border-neutral-800">
-      <div className="container mx-auto">
-        <div className="flex flex-col gap-8 py-12 md:flex-row md:items-center md:justify-between">
+    <footer className="w-full border-t border-border">
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col gap-8 py-14 md:flex-row md:items-start md:justify-between">
           <div className="flex flex-col gap-3">
             <a href="/" className="flex items-center gap-2">
-              <Rocket size={24} weight="fill" className="text-black dark:text-white" />
-              <span className="font-medium text-black dark:text-white">Shippie</span>
+              <Anchor size={20} weight="bold" className="text-signal" />
+              <span className="font-display text-xl font-extrabold uppercase tracking-tight">
+                Shippie
+              </span>
             </a>
             <p className="max-w-xs text-sm text-muted-foreground">
-              An extendable, open-source AI code review agent.
+              The AI reviewer that clears your code to merge.
             </p>
+            <span className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground/55">
+              Manifest № SHP · open source
+            </span>
           </div>
 
-          <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <a
-              href={GITHUB_REPO}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <GithubLogo size={16} weight="fill" /> GitHub
-            </a>
-            <a
-              href={DOCS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Docs
-            </a>
-            <a
-              href={NPM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              npm
-            </a>
-            <a
-              href="#faq"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              FAQ
-            </a>
+          <nav className="flex flex-wrap gap-x-8 gap-y-3 font-mono text-xs uppercase tracking-[0.14em]">
+            {links.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                {...(link.external
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
+                className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-signal"
+              >
+                {link.label === 'GitHub' && <GithubLogo size={14} weight="fill" />}
+                {link.label}
+              </a>
+            ))}
           </nav>
         </div>
 
-        <div className="border-t border-gray-200 py-6 text-sm text-muted-foreground dark:border-neutral-800">
-          <p>© {new Date().getFullYear()} Shippie · Open source under the MIT license.</p>
+        <div className="flex items-center justify-between border-t border-border py-6 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground/65">
+          <p>© {new Date().getFullYear()} Shippie</p>
+          <p>MIT license</p>
         </div>
       </div>
     </footer>
