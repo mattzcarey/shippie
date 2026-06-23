@@ -1,15 +1,19 @@
+/* Kumo first so its theme tokens register before Tailwind. */
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
-@import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Tailwind v4 doesn't scan node_modules; let it discover Kumo's utility classes.
+   Kumo is hoisted to the workspace root node_modules. */
+@source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
 
 /* ─────────────────────────────────────────────────────────────
-   Shippie — "Freight Inspection"
-   Warm carbon ink · bone paper · one vermilion signal accent.
-   Display: Saira Condensed · Body: Archivo · Mono: JetBrains Mono
+   Shippie — built on Kumo (Cloudflare's design system, on Base UI).
+   Light/dark is driven by the `data-mode` attribute on <html> and
+   resolved via CSS light-dark(). We bridge our own semantic token
+   names onto Kumo's light/dark tokens so the whole site themes
+   automatically. Display: Saira Condensed · Body: Archivo · Mono: JetBrains.
    ───────────────────────────────────────────────────────────── */
-
-@theme inline {
+@theme {
   --font-display: "Saira Condensed", "Arial Narrow", sans-serif;
   --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -19,76 +23,51 @@
   --radius-lg: 4px;
   --radius-xl: 6px;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  /* Warm-paper light (default) + warm-carbon dark. Resolved by light-dark()
+     against the color-scheme that Kumo's data-mode sets. */
+  --color-background: light-dark(#f2eee6, #0b0a08);
+  --color-foreground: light-dark(#18181b, #ece6da);
+  --color-card: light-dark(#f8f5ee, #131210);
+  --color-card-foreground: light-dark(#18181b, #ece6da);
+  --color-popover: light-dark(#f8f5ee, #15130f);
+  --color-popover-foreground: light-dark(#18181b, #ece6da);
+  --color-primary: light-dark(#18181b, #ece6da);
+  --color-primary-foreground: light-dark(#f2eee6, #0b0a08);
+  --color-secondary: light-dark(#e8e2d4, #1b1814);
+  --color-secondary-foreground: light-dark(#18181b, #ece6da);
+  --color-muted: light-dark(#e8e2d4, #1b1814);
+  --color-muted-foreground: light-dark(#6b675e, #948b7c);
+  --color-accent: light-dark(#e8e2d4, #1b1814);
+  --color-accent-foreground: light-dark(#18181b, #ece6da);
+  --color-border: light-dark(rgba(24, 24, 27, 0.12), rgba(236, 230, 218, 0.1));
+  --color-input: light-dark(rgba(24, 24, 27, 0.15), rgba(236, 230, 218, 0.14));
+  --color-ring: var(--color-signal);
 
-  /* the one hot accent */
-  --color-signal: var(--signal);
-  --color-signal-foreground: var(--signal-foreground);
-  --color-paper: var(--paper);
-}
-
-:root,
-.dark {
-  --radius: 3px;
-
-  --background: #0b0a08;
-  --foreground: #ece6da;
-  --card: #131210;
-  --card-foreground: #ece6da;
-  --popover: #131210;
-  --popover-foreground: #ece6da;
-  --primary: #ece6da;
-  --primary-foreground: #0b0a08;
-  --secondary: #1b1814;
-  --secondary-foreground: #ece6da;
-  --muted: #1b1814;
-  --muted-foreground: #948b7c;
-  --accent: #1b1814;
-  --accent-foreground: #ece6da;
-  --destructive: #ff4a1c;
-  --border: rgba(236, 230, 218, 0.1);
-  --input: rgba(236, 230, 218, 0.14);
-  --ring: #ff4a1c;
-
-  --signal: #ff4a1c;
-  --signal-foreground: #0b0a08;
-  --paper: #ece6da;
+  /* one warm accent (Cloudflare orange), tuned slightly per mode */
+  --color-signal: light-dark(#e5560e, #f6821f);
+  --color-signal-foreground: oklch(1 0 0);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   html {
     scroll-behavior: smooth;
+  }
+  /* force light-dark() to resolve per the data-mode Kumo sets */
+  html[data-mode="light"] {
+    color-scheme: light;
+  }
+  html[data-mode="dark"] {
+    color-scheme: dark;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: "ss01", "cv01";
+    font-feature-settings: "ss01";
   }
 
   ::selection {
-    background: var(--signal);
-    color: var(--signal-foreground);
+    background: var(--color-signal);
+    color: oklch(1 0 0);
   }
 
   /* film grain — fixed full-bleed, drifts subtly */
@@ -98,7 +77,7 @@
     inset: -50%;
     z-index: 50;
     pointer-events: none;
-    opacity: 0.05;
+    opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     animation: grain 8s steps(6) infinite;
   }
@@ -108,25 +87,19 @@
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--background);
+    background: var(--color-background);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--muted);
-    border: 2px solid var(--background);
-    border-radius: 0;
+    background: var(--color-input);
+    border: 2px solid var(--color-background);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--signal);
+    background: var(--color-signal);
   }
 }
 
 @utility font-display {
   font-family: var(--font-display);
-}
-
-/* Hairline registration marks for "manifest" cards */
-@utility reg-marks {
-  position: relative;
 }
 
 @keyframes grain {
@@ -164,7 +137,17 @@
   animation: marquee 28s linear infinite;
 }
 
-/* Add accordion animations */
+/* Base UI Accordion panel — height animation driven by Base UI's CSS var */
+.faq-panel {
+  height: var(--accordion-panel-height);
+  overflow: hidden;
+  transition: height 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.faq-panel[data-starting-style],
+.faq-panel[data-ending-style] {
+  height: 0;
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

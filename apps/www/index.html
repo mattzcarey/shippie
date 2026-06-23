@@ -2,6 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Set Kumo color mode before paint to avoid a flash.
+      (function () {
+        try {
+          var stored = localStorage.getItem("mode");
+          var mode = stored === "light" || stored === "dark" ? stored : "light";
+          document.documentElement.setAttribute("data-mode", mode);
+        } catch (e) {
+          document.documentElement.setAttribute("data-mode", "light");
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

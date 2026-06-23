@@ -1,4 +1,5 @@
 'use client'
+import { Switch } from '@cloudflare/kumo/components/switch'
 import { Moon, Sun } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import CustomLogo from './CustomLogo'
@@ -17,31 +18,19 @@ import {
 const GITHUB_REPO = 'https://github.com/mattzcarey/shippie'
 const DOCS_URL = 'https://github.com/mattzcarey/shippie/tree/main/docs'
 
+type Mode = 'light' | 'dark'
+
 const CustomNavbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mode, setMode] = useState<Mode>('dark')
 
   useEffect(() => {
-    // First check if user has explicitly set a preference
-    const storedPreference = localStorage.getItem('darkMode')
+    // the inline script in index.html already set data-mode before paint
+    const current =
+      (document.documentElement.getAttribute('data-mode') as Mode | null) ?? 'dark'
+    setMode(current)
 
-    // Only use system preference if no stored preference exists
-    const isDark =
-      storedPreference !== null
-        ? storedPreference === 'true'
-        : window.matchMedia('(prefers-color-scheme: dark)').matches
-
-    setIsDarkMode(isDark)
-
-    // Apply dark mode class to document
-    if (isDark) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-
-    // Set up intersection observer to detect active section
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -53,56 +42,50 @@ const CustomNavbar = () => {
       { threshold: 0.5 }
     )
 
-    // Observe sections
     const sections = document.querySelectorAll('section[id]')
     for (const section of Array.from(sections)) {
       observer.observe(section)
     }
 
-    // Add home as active if user is at the top
     const handleScroll = () => {
-      if (window.scrollY < 100) {
-        setActiveSection('home')
-      }
+      if (window.scrollY < 100) setActiveSection('home')
     }
-
     window.addEventListener('scroll', handleScroll)
 
     return () => {
-      for (const section of Array.from(sections)) {
-        observer.unobserve(section)
-      }
+      for (const section of Array.from(sections)) observer.unobserve(section)
       window.removeEventListener('scroll', handleScroll)
     }
   }, [])
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode
-    setIsDarkMode(newDarkMode)
-
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
+  const applyMode = (next: Mode) => {
+    setMode(next)
+    document.documentElement.setAttribute('data-mode', next)
+    try {
+      localStorage.setItem('mode', next)
+    } catch {
+      // ignore storage failures
     }
-
-    localStorage.setItem('darkMode', newDarkMode.toString())
   }
 
   const navItems = [
-    {
-      name: 'Features',
-      link: '#agent',
-    },
-    {
-      name: 'Install',
-      link: '#install',
-    },
-    {
-      name: 'FAQ',
-      link: '#faq',
-    },
+    { name: 'Features', link: '#agent' },
+    { name: 'Install', link: '#install' },
+    { name: 'FAQ', link: '#faq' },
   ]
+
+  const modeToggle = (
+    <div className="flex items-center gap-2 text-kumo-subtle">
+      <Sun size={15} weight={mode === 'light' ? 'fill' : 'regular'} />
+      <Switch
+        size="base"
+        checked={mode === 'dark'}
+        onCheckedChange={(checked) => applyMode(checked ? 'dark' : 'light')}
+        aria-label="Toggle dark mode"
+      />
+      <Moon size={15} weight={mode === 'dark' ? 'fill' : 'regular'} />
+    </div>
+  )
 
   return (
     <div className="relative w-full">
@@ -124,14 +107,7 @@ const CustomNavbar = () => {
                   {visible ? 'Docs' : 'Documentation'}
                 </NavbarButton>
                 <GitHubStars repoUrl={GITHUB_REPO} visible={visible} />
-                <button
-                  onClick={toggleDarkMode}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-neutral-800 text-gray-800 dark:text-white relative z-50 cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
-                  aria-label="Toggle dark mode"
-                  type="button"
-                >
-                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
+                {modeToggle}
               </div>
             </>
           )}
@@ -141,16 +117,9 @@ const CustomNavbar = () => {
         <MobileNav>
           <MobileNavHeader>
             <CustomLogo />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <GitHubStars repoUrl={GITHUB_REPO} collapsed={true} />
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full bg-gray-100 dark:bg-neutral-800 text-gray-800 dark:text-white relative z-50 cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
-                aria-label="Toggle dark mode"
-                type="button"
-              >
-                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
+              {modeToggle}
               <MobileNavToggle
                 isOpen={isMobileMenuOpen}
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -167,10 +136,10 @@ const CustomNavbar = () => {
                 key={item.link}
                 href={item.link}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`relative text-neutral-600 dark:text-neutral-300 ${
+                className={`relative font-mono text-sm uppercase tracking-[0.12em] ${
                   activeSection === item.link.substring(1)
-                    ? 'font-medium text-signal'
-                    : ''
+                    ? 'font-semibold text-signal'
+                    : 'text-muted-foreground'
                 }`}
               >
                 <span className="block">{item.name}</span>

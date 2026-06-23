@@ -8,7 +8,7 @@ const GITHUB_REPO = 'https://github.com/mattzcarey/shippie'
 const Hero = () => {
   const [titleNumber, setTitleNumber] = useState(0)
   const titles = useMemo(
-    () => ['pull request', 'merge', 'commit', 'release', 'staged diff'],
+    () => ['vibe coders', 'hackers', 'builders', 'shippers', 'indie devs'],
     []
   )
   // Reserve space for the widest word so the line never reflows as it rotates.
@@ -67,14 +67,13 @@ const Hero = () => {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              className="font-display text-[clamp(3.5rem,12vw,9rem)] font-extrabold uppercase leading-[0.84] tracking-tight"
+              className="font-display text-[clamp(3rem,10vw,8rem)] font-extrabold uppercase leading-[0.84] tracking-tight"
             >
               <span className="block bg-gradient-to-b from-foreground to-foreground/55 bg-clip-text text-transparent">
-                AI code review
+                Code review for
               </span>
-              <span className="mt-2 flex flex-wrap items-baseline justify-center gap-x-4 text-[clamp(1.9rem,7vw,5rem)] font-bold text-muted-foreground">
-                <span className="font-display uppercase">on every</span>
-                <span className="relative inline-block whitespace-nowrap text-left font-display uppercase text-signal">
+              <span className="mt-1 flex justify-center text-signal">
+                <span className="relative inline-block whitespace-nowrap text-left">
                   {/* invisible sizer reserves the widest word's width + the baseline */}
                   <span className="invisible" aria-hidden="true">
                     {longestTitle}
@@ -99,7 +98,7 @@ const Hero = () => {
             </motion.h1>
           </div>
 
-          {/* subhead */}
+          {/* subhead — what it does */}
           <motion.p
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
