@@ -13,6 +13,7 @@
         "check:fix": "biome check --fix"
     },
     "dependencies": {
+        "@cloudflare/kumo": "^2.6.0",
         "@phosphor-icons/react": "^2.1.7",
         "@radix-ui/react-accordion": "^1.2.8",
         "@radix-ui/react-slot": "^1.2.0",

@@ -1,15 +1,19 @@
+/* Kumo first so its theme tokens register before Tailwind. */
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
-@import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Tailwind v4 doesn't scan node_modules; let it discover Kumo's utility classes.
+   Kumo is hoisted to the workspace root node_modules. */
+@source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
 
 /* ─────────────────────────────────────────────────────────────
-   Shippie — "Freight Inspection"
-   Warm carbon ink · bone paper · one vermilion signal accent.
-   Display: Saira Condensed · Body: Archivo · Mono: JetBrains Mono
+   Shippie — built on Kumo (Cloudflare's design system, on Base UI).
+   Light/dark is driven by the `data-mode` attribute on <html> and
+   resolved via CSS light-dark(). We bridge our own semantic token
+   names onto Kumo's light/dark tokens so the whole site themes
+   automatically. Display: Saira Condensed · Body: Archivo · Mono: JetBrains.
    ───────────────────────────────────────────────────────────── */
-
-@theme inline {
+@theme {
   --font-display: "Saira Condensed", "Arial Narrow", sans-serif;
   --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -19,76 +23,43 @@
   --radius-lg: 4px;
   --radius-xl: 6px;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  /* bridge our semantic tokens -> Kumo's (each carries a light-dark() value) */
+  --color-background: var(--color-kumo-canvas);
+  --color-foreground: var(--text-color-kumo-default);
+  --color-card: var(--color-kumo-base);
+  --color-card-foreground: var(--text-color-kumo-default);
+  --color-popover: var(--color-kumo-elevated);
+  --color-popover-foreground: var(--text-color-kumo-default);
+  --color-primary: var(--text-color-kumo-default);
+  --color-primary-foreground: var(--color-kumo-canvas);
+  --color-secondary: var(--color-kumo-control);
+  --color-secondary-foreground: var(--text-color-kumo-default);
+  --color-muted: var(--color-kumo-tint);
+  --color-muted-foreground: var(--text-color-kumo-subtle);
+  --color-accent: var(--color-kumo-tint);
+  --color-accent-foreground: var(--text-color-kumo-default);
+  --color-border: var(--color-kumo-hairline);
+  --color-input: var(--color-kumo-line);
+  --color-ring: var(--color-kumo-focus);
 
-  /* the one hot accent */
-  --color-signal: var(--signal);
-  --color-signal-foreground: var(--signal-foreground);
-  --color-paper: var(--paper);
-}
-
-:root,
-.dark {
-  --radius: 3px;
-
-  --background: #0b0a08;
-  --foreground: #ece6da;
-  --card: #131210;
-  --card-foreground: #ece6da;
-  --popover: #131210;
-  --popover-foreground: #ece6da;
-  --primary: #ece6da;
-  --primary-foreground: #0b0a08;
-  --secondary: #1b1814;
-  --secondary-foreground: #ece6da;
-  --muted: #1b1814;
-  --muted-foreground: #948b7c;
-  --accent: #1b1814;
-  --accent-foreground: #ece6da;
-  --destructive: #ff4a1c;
-  --border: rgba(236, 230, 218, 0.1);
-  --input: rgba(236, 230, 218, 0.14);
-  --ring: #ff4a1c;
-
-  --signal: #ff4a1c;
-  --signal-foreground: #0b0a08;
-  --paper: #ece6da;
+  /* the one hot accent = Kumo brand (Cloudflare orange), same in both modes */
+  --color-signal: var(--text-color-kumo-brand);
+  --color-signal-foreground: oklch(1 0 0);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   html {
     scroll-behavior: smooth;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: "ss01", "cv01";
+    font-feature-settings: "ss01";
   }
 
   ::selection {
-    background: var(--signal);
-    color: var(--signal-foreground);
+    background: var(--text-color-kumo-brand);
+    color: oklch(1 0 0);
   }
 
   /* film grain — fixed full-bleed, drifts subtly */
@@ -98,7 +69,7 @@
     inset: -50%;
     z-index: 50;
     pointer-events: none;
-    opacity: 0.05;
+    opacity: 0.04;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     animation: grain 8s steps(6) infinite;
   }
@@ -108,25 +79,19 @@
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--background);
+    background: var(--color-kumo-canvas);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--muted);
-    border: 2px solid var(--background);
-    border-radius: 0;
+    background: var(--color-kumo-line);
+    border: 2px solid var(--color-kumo-canvas);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--signal);
+    background: var(--text-color-kumo-brand);
   }
 }
 
 @utility font-display {
   font-family: var(--font-display);
-}
-
-/* Hairline registration marks for "manifest" cards */
-@utility reg-marks {
-  position: relative;
 }
 
 @keyframes grain {
@@ -164,7 +129,6 @@
   animation: marquee 28s linear infinite;
 }
 
-/* Add accordion animations */
 @keyframes accordion-down {
   from {
     height: 0;
