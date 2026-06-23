@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": false,
+  "tabWidth": 2,
+  "printWidth": 90,
+  "singleQuote": true,
+  "jsxSingleQuote": false,
+  "quoteProps": "as-needed",
+  "trailingComma": "es5",
+  "semi": false,
+  "arrowParens": "always",
+  "bracketSameLine": false,
+  "bracketSpacing": true,
+  "ignorePatterns": [
+    "**/*.md",
+    "**/*.yml",
+    "**/*.yaml",
+    "package.json",
+    "package-lock.json",
+    "dist/**",
+    "node_modules/**"
+  ]
+}
