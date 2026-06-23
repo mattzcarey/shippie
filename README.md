@@ -8,13 +8,13 @@
 
 ## Helps you ship faster
 
-Shippie is a prebuilt code-review agent built on [flue](https://github.com/withastro/flue). It runs an agent loop (on `pi`) that reads your diff, explores the codebase with real developer tools, and posts focused review comments — picking up issues a human reviewer would, such as:
+Shippie is an extendable code-review agent. It runs an agent loop that reads your diff, explores the codebase with real developer tools, and posts focused review comments — picking up issues a human reviewer would, such as:
 
 - Exposed secrets
 - Slow or inefficient code
 - Potential bugs or unhandled edge cases
 
-The agent uses flue's built-in `pi` tools (`read`, `write`, `edit`, `bash`, `grep`, `glob`, `task`) plus shippie's `suggest_change` tool for inline comments. It can also act as a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) client to reach external tools like browser automation, infrastructure, and observability.
+Shippie can also act as a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) client to reach external tools like browser automation, observability and documentation.
 
 ## Demo
 
@@ -22,11 +22,11 @@ https://github.com/mattzcarey/shippie/assets/77928207/92029baf-f691-465f-8d15-e1
 
 ## Ethos 💭
 
-- A prebuilt review **workflow**, not a bespoke CLI — the agent loop runs on flue + `pi`.
-- Runs **anywhere flue deploys**: Node, Cloudflare, GitHub Actions, GitLab CI.
+- A prebuilt review **workflow**, not a bespoke CLI — the agent loop runs on [flue](https://flueframework.com/) + [pi](https://pi.dev).
+- Runs **anywhere**: Node, Cloudflare, GitHub Actions, GitLab CI.
 - Functions as a human code reviewer, using flue's built-in tools instead of a hand-rolled tool registry.
-- Provider-agnostic: Anthropic, OpenAI, OpenRouter, and **Cloudflare Workers AI** out of the box.
-- Acts as an MCP client (remote HTTP/SSE) for integration with external tools.
+- Provider-agnostic: Anthropic, OpenAI, OpenRouter, and Cloudflare Workers AI out of the box.
+- Acts as an MCP client for integration with external tools.
 
 ## Quick start 🚀
 
@@ -65,13 +65,7 @@ See [Action Options](docs/action-options.md) for all inputs (`MODEL`, `THINKING_
 Run the review workflow locally with no server. Local mode reviews your **staged changes** (`git diff --cached`) and writes results to `.shippie/review/local_*.md`:
 
 ```bash
-flue run review --target node --payload '{"platform":"local"}'
-```
-
-Or via the package script:
-
-```bash
-npm run review
+npx shippie review
 ```
 
 ### Run on demand with `/shippie`
@@ -129,14 +123,6 @@ This repo targets Node >= 22.19 with npm.
    - `npm test` — run tests
 
    See `package.json` for the full list of scripts.
-
-5. Make a PR 🎉
-
-We use [release-please](https://github.com/googleapis/release-please) on this project. If you want to create a new release from your PR, please make sure your PR title follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format. The release-please bot will automatically create a new release for you when your PR is merged.
-
-- fix: which represents bug fixes, and correlates to a patch version.
-- feat: which represents a new feature, and correlates to a SemVer minor.
-- feat!:, or fix!:, refactor!:, etc., which represent a breaking change (indicated by the !) and will result in a major version.
 
 ## Contributors 🙏
 
