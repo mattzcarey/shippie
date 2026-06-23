@@ -23,33 +23,41 @@
   --radius-lg: 4px;
   --radius-xl: 6px;
 
-  /* bridge our semantic tokens -> Kumo's (each carries a light-dark() value) */
-  --color-background: var(--color-kumo-canvas);
-  --color-foreground: var(--text-color-kumo-default);
-  --color-card: var(--color-kumo-base);
-  --color-card-foreground: var(--text-color-kumo-default);
-  --color-popover: var(--color-kumo-elevated);
-  --color-popover-foreground: var(--text-color-kumo-default);
-  --color-primary: var(--text-color-kumo-default);
-  --color-primary-foreground: var(--color-kumo-canvas);
-  --color-secondary: var(--color-kumo-control);
-  --color-secondary-foreground: var(--text-color-kumo-default);
-  --color-muted: var(--color-kumo-tint);
-  --color-muted-foreground: var(--text-color-kumo-subtle);
-  --color-accent: var(--color-kumo-tint);
-  --color-accent-foreground: var(--text-color-kumo-default);
-  --color-border: var(--color-kumo-hairline);
-  --color-input: var(--color-kumo-line);
-  --color-ring: var(--color-kumo-focus);
+  /* Warm-paper light (default) + warm-carbon dark. Resolved by light-dark()
+     against the color-scheme that Kumo's data-mode sets. */
+  --color-background: light-dark(#f2eee6, #0b0a08);
+  --color-foreground: light-dark(#18181b, #ece6da);
+  --color-card: light-dark(#f8f5ee, #131210);
+  --color-card-foreground: light-dark(#18181b, #ece6da);
+  --color-popover: light-dark(#f8f5ee, #15130f);
+  --color-popover-foreground: light-dark(#18181b, #ece6da);
+  --color-primary: light-dark(#18181b, #ece6da);
+  --color-primary-foreground: light-dark(#f2eee6, #0b0a08);
+  --color-secondary: light-dark(#e8e2d4, #1b1814);
+  --color-secondary-foreground: light-dark(#18181b, #ece6da);
+  --color-muted: light-dark(#e8e2d4, #1b1814);
+  --color-muted-foreground: light-dark(#6b675e, #948b7c);
+  --color-accent: light-dark(#e8e2d4, #1b1814);
+  --color-accent-foreground: light-dark(#18181b, #ece6da);
+  --color-border: light-dark(rgba(24, 24, 27, 0.12), rgba(236, 230, 218, 0.1));
+  --color-input: light-dark(rgba(24, 24, 27, 0.15), rgba(236, 230, 218, 0.14));
+  --color-ring: var(--color-signal);
 
-  /* the one hot accent = Kumo brand (Cloudflare orange), same in both modes */
-  --color-signal: var(--text-color-kumo-brand);
+  /* one warm accent (Cloudflare orange), tuned slightly per mode */
+  --color-signal: light-dark(#e5560e, #f6821f);
   --color-signal-foreground: oklch(1 0 0);
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+  }
+  /* force light-dark() to resolve per the data-mode Kumo sets */
+  html[data-mode="light"] {
+    color-scheme: light;
+  }
+  html[data-mode="dark"] {
+    color-scheme: dark;
   }
 
   body {
@@ -58,7 +66,7 @@
   }
 
   ::selection {
-    background: var(--text-color-kumo-brand);
+    background: var(--color-signal);
     color: oklch(1 0 0);
   }
 
@@ -69,7 +77,7 @@
     inset: -50%;
     z-index: 50;
     pointer-events: none;
-    opacity: 0.04;
+    opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     animation: grain 8s steps(6) infinite;
   }
@@ -79,14 +87,14 @@
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-kumo-canvas);
+    background: var(--color-background);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-kumo-line);
-    border: 2px solid var(--color-kumo-canvas);
+    background: var(--color-input);
+    border: 2px solid var(--color-background);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-color-kumo-brand);
+    background: var(--color-signal);
   }
 }
 

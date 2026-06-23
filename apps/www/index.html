@@ -7,15 +7,10 @@
       (function () {
         try {
           var stored = localStorage.getItem("mode");
-          var mode =
-            stored === "light" || stored === "dark"
-              ? stored
-              : window.matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dark"
-                : "light";
+          var mode = stored === "light" || stored === "dark" ? stored : "light";
           document.documentElement.setAttribute("data-mode", mode);
         } catch (e) {
-          document.documentElement.setAttribute("data-mode", "dark");
+          document.documentElement.setAttribute("data-mode", "light");
         }
       })();
     </script>
