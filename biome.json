@@ -37,6 +37,12 @@
     "files": {
         "ignore": ["node_modules/**", "dist/**", "examples/**", "specs/cases/.cache/**"]
     },
+    "overrides": [
+        {
+            "include": ["package.json"],
+            "formatter": { "enabled": false }
+        }
+    ],
     "vcs": {
         "enabled": true,
         "clientKind": "git",
