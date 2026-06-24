@@ -19,21 +19,17 @@ node .agents/skills/chrome-cdp/scripts/cdp.mjs --port $PORT <command> <target> [
 
 where `<target>` is a **targetId prefix** from `cdp list` (copy the prefix shown, e.g. `18EB6379`).
 
-## 1. Launch ONCE per flow — survives across bash calls (do NOT skip setsid/nohup)
+## 1. Launch ONCE per flow — survives across bash calls
 
-Each `bash` tool call is a fresh process group, so a launched browser is only reachable later if
-it is **detached**. Use a unique port + temp profile per flow (parallel-safe):
+Each `bash` tool call is a fresh process group, so a launched browser is only reachable later if it is
+**detached**. The helper handles that portably (setsid on Linux, nohup+disown on macOS), uses
+`$CHROME_BIN`, bakes in `--no-sandbox --disable-dev-shm-usage` (mandatory as root / in a container), and
+blocks until the CDP endpoint is ready. Use a unique port per flow (parallel-safe):
 
 ```bash
-PORT=$(( 9222 + ${FLOW_INDEX:-0} )); PROFILE=$(mktemp -d)
-# Linux: setsid. macOS has no setsid → use `nohup … & disown`.
-setsid nohup "$CHROME_BIN" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage \
-  --remote-debugging-port=$PORT --user-data-dir="$PROFILE" about:blank \
-  >/tmp/chrome-$PORT.log 2>&1 & disown
-until curl -sf http://127.0.0.1:$PORT/json/version >/dev/null; do sleep 0.2; done
+PORT=$(( 9222 + ${FLOW_INDEX:-0} ))
+bash .agents/skills/chrome-cdp/scripts/launch-chrome.sh "$PORT"
 ```
-
-`--no-sandbox --disable-dev-shm-usage` are mandatory when running as root / in a container.
 
 ## 2. Drive it. `--port $PORT` re-discovers the ws endpoint via /json/version each call —
 ##    no shell variable survives between bash calls, only the port does.
