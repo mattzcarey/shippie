@@ -27,9 +27,20 @@ COPY package.json package-lock.json ./
 # @flue/cli. `npm install` (not `npm ci`) tolerates the macOS-generated lockfile omitting
 # Linux-only optional deps (same reason the CI workflows use install); the lock is copied
 # as a reproducibility hint. Omitting devDeps also sidesteps @flue/cli -> workerd on arm64.
-RUN npm install --omit=dev --no-audit --no-fund
-# Copies the repo INCLUDING the prebuilt dist/ — run `npm run build` on the host first.
+# --ignore-scripts: patch-package is a devDep (absent here) and patches/ isn't copied yet,
+# so the package's own "postinstall": "patch-package" would crash. We apply the patch
+# explicitly after COPY . . below.
+RUN npm install --omit=dev --no-audit --no-fund --ignore-scripts
+# Copies the repo INCLUDING the prebuilt dist/ AND patches/ — run `npm run build` on the host first.
 COPY . .
+# shippie: transient retry — apply the pi-ai patch into the prod node_modules. patch-package
+# is a devDep (not installed under --omit=dev), so `npx --yes` fetches it on the fly; it reads
+# patches/ (now present from COPY) and patches the already-installed @earendil-works/pi-ai
+# (externalized at runtime by dist/server.mjs). Then assert it actually took (fails loudly on
+# version drift / silent no-op).
+RUN npx --yes patch-package \
+  && grep -q "PI_AI_DISABLE_RETRY" node_modules/@earendil-works/pi-ai/dist/stream.js \
+  || { echo "pi-ai transient-retry patch not applied (version drift?) — check patches/" >&2; exit 1; }
 # Fail loudly if dist wasn't prebuilt (the entrypoint runs the prebuilt dist/server.mjs).
 RUN test -f dist/server.mjs || { echo "dist/server.mjs missing — run 'npm run build' before 'docker build'" >&2; exit 1; }
 

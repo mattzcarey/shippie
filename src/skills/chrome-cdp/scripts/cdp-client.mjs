@@ -19,6 +19,28 @@ import { dirname, isAbsolute, join } from 'node:path'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// Parse a viewport from open({ viewport }) or $E2E_VIEWPORT: "1280x900", "375x812@2"
+// (with deviceScaleFactor), or a preset (mobile|tablet|desktop). The per-run browser
+// size is the one thing that changes per web target — set $E2E_VIEWPORT, no test edit.
+const VIEWPORT_PRESETS = {
+  mobile: { width: 390, height: 844, deviceScaleFactor: 3 },
+  tablet: { width: 820, height: 1180, deviceScaleFactor: 2 },
+  desktop: { width: 1280, height: 900, deviceScaleFactor: 1 },
+}
+const parseViewport = (v) => {
+  if (!v) return undefined
+  if (typeof v === 'object') return v
+  const preset = VIEWPORT_PRESETS[String(v).toLowerCase()]
+  if (preset) return preset
+  const m = String(v).match(/^(\d+)x(\d+)(?:@(\d+(?:\.\d+)?))?$/)
+  if (!m) return undefined
+  return { width: Number(m[1]), height: Number(m[2]), deviceScaleFactor: m[3] ? Number(m[3]) : 1 }
+}
+
+// Chrome discovery for shippie's OWN environment (Linux/macOS). shippie runs in its
+// own env, never the target's OS — the target is reached over the wire (a URL), so
+// there is no Windows path here (see docs/ambient-qa.md "self-contained shippie").
+// CHROME_BIN wins; else probe PATH via `which`, then the macOS app path.
 const resolveChrome = () => {
   if (process.env.CHROME_BIN && existsSync(process.env.CHROME_BIN)) return process.env.CHROME_BIN
   for (const c of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']) {
@@ -200,12 +222,13 @@ export async function open(opts = {}) {
   await cdp.send('Runtime.enable')
   await cdp.send('DOM.enable')
 
-  // Optional viewport: open({ viewport: { width, height, deviceScaleFactor? } }).
-  if (opts.viewport?.width && opts.viewport?.height) {
+  // Viewport: open({ viewport }) or $E2E_VIEWPORT ("1280x900" | "375x812@2" | mobile|tablet|desktop).
+  const viewport = parseViewport(opts.viewport ?? process.env.E2E_VIEWPORT)
+  if (viewport?.width && viewport?.height) {
     await cdp.send('Emulation.setDeviceMetricsOverride', {
-      width: opts.viewport.width,
-      height: opts.viewport.height,
-      deviceScaleFactor: opts.viewport.deviceScaleFactor ?? 1,
+      width: viewport.width,
+      height: viewport.height,
+      deviceScaleFactor: viewport.deviceScaleFactor ?? 1,
       mobile: false,
     })
   }

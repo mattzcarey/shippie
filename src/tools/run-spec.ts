@@ -44,6 +44,7 @@ export const createRunSpecTool = (cfg: QaConfig) =>
         CDP_IGNORE_CERT_ERRORS: '1',
       }
       if (target) env.E2E_BASE_URL = target
+      if (cfg.viewport) env.E2E_VIEWPORT = cfg.viewport
       const res = await runShell('node', [specPath], { cwd: cfg.workspace, env })
       return JSON.stringify({
         ok: res.exitCode === 0,

@@ -13,7 +13,8 @@ export const route: WorkflowRouteHandler = async (_c, next) => next()
 /** Parse the agent's final message as the result JSON; tolerate prose/fences. */
 const parseResult = (text: string | undefined): Record<string, unknown> => {
   const raw = (text ?? '').trim()
-  if (!raw) return { passed: false, summary: 'No final message from the agent.' }
+  if (!raw)
+    return { passed: false, results: [], summary: 'No final message from the agent.' }
   const candidates = [raw]
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (fenced) candidates.unshift(fenced[1].trim())
@@ -26,15 +27,17 @@ const parseResult = (text: string | undefined): Record<string, unknown> => {
       // try the next candidate
     }
   }
-  return { passed: false, summary: raw.slice(0, 500) }
+  return { passed: false, results: [], summary: raw.slice(0, 500) }
 }
 
 /**
  * One-shot autonomous QA. Run with:
  *   flue run qa --target node --payload '{"platform":"local","target":"http://localhost:5173"}'
  *
- * Explores the repo, catalogs flows, drives the top flow in headless Chrome over
- * CDP, writes + self-verifies a CDP test (../cdp-client.mjs), and returns a JSON result.
+ * The lead explores the repo, catalogs flows, then fans out one browser-driver
+ * subagent per flow (in parallel) to drive each flow in headless Chrome over CDP and
+ * self-verify its CDP test (../cdp-client.mjs). The lead collects the verdicts, opens
+ * one missing-coverage PR with the green specs, and returns a JSON result.
  */
 export async function run({ init, payload, env }: FlueContext<QaPayload>) {
   const cfg = resolveQaConfig(payload, env as NodeJS.ProcessEnv)

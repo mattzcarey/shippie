@@ -24,6 +24,8 @@ export interface QaPayload {
   branch?: string
   /** CHROME_BIN — local() env is an allowlist snapshot, so it must be explicit. */
   chromeBin?: string
+  /** Browser size for web targets: "1280x900" | "375x812@2" | mobile|tablet|desktop. */
+  viewport?: string
   mcpServers?: Record<string, McpServerInput>
 }
 
@@ -43,6 +45,8 @@ export interface QaConfig {
   scope?: string
   branch?: string
   chromeBin: string
+  /** Per-run browser size for web targets (→ E2E_VIEWPORT). */
+  viewport?: string
   /** No prNumber: QA OPENS PRs, it does not review an existing one. */
   github?: QaGithubTarget
   mcpServers: Record<string, McpServerInput>
@@ -106,6 +110,7 @@ export const resolveQaConfig = (
     scope: p.scope ?? env.SHIPPIE_QA_SCOPE,
     branch: p.branch ?? env.SHIPPIE_QA_BRANCH,
     chromeBin: p.chromeBin ?? env.CHROME_BIN ?? defaultChromeBin(),
+    viewport: p.viewport ?? env.SHIPPIE_QA_VIEWPORT,
     github,
     mcpServers: base.mcpServers,
   }

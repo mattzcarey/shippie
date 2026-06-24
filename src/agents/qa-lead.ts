@@ -5,13 +5,15 @@ import { buildQaInstructions } from '../qa/instructions'
 import { createCatalogFlowsTool } from '../tools/catalog-flows'
 import { createOpenPrTool } from '../tools/open-pull-request'
 import { createRunSpecTool } from '../tools/run-spec'
+import { browserDriverProfile } from './qa-browser-driver'
 
 /**
- * Shippie QA lead. v0 is a SINGLE non-subagent lead: it explores the repo,
- * catalogs flows, drives the top flow in a headless Chrome over CDP (the
- * auto-discovered chrome-cdp skill), writes a black-box CDP test, and
- * self-verifies it green with run_spec — all in its own session. Fan-out via
- * `task` + a browser-driver subagent profile is phase 1 (see docs/ambient-qa.md).
+ * Shippie QA lead (depth 0). It explores the repo, catalogs flows, then FANS OUT
+ * one `browser-driver` subagent per flow via the built-in `task` tool — each driver
+ * owns its own headless Chrome over CDP (the auto-discovered chrome-cdp skill),
+ * writes a black-box CDP test, and self-verifies it green with run_spec. The lead
+ * collects the verdicts and opens one missing-coverage PR. With a single catalogued
+ * flow this degrades to exactly one driver task. See docs/ambient-qa.md §3.
  */
 export default createAgent<QaPayload>(async ({ payload, env }) => {
   const cfg = resolveQaConfig(payload, env as NodeJS.ProcessEnv)
@@ -29,6 +31,9 @@ export default createAgent<QaPayload>(async ({ payload, env }) => {
     cwd: cfg.workspace, // .agents/skills/chrome-cdp is materialized here at run start
     instructions: await buildQaInstructions(cfg),
     tools: [createCatalogFlowsTool(cfg), createRunSpecTool(cfg), createOpenPrTool(cfg)],
+    // The per-flow drivers the lead fans out to via `task`. The profile carries its
+    // own instructions + run_spec tool; chrome-cdp auto-discovers from the shared cwd.
+    subagents: [browserDriverProfile(cfg)],
     compaction: { keepRecentTokens: 6000 }, // screenshots are heavy in context
     // Size BELOW the GitHub Actions job ceiling (hosted runners cap at 6h).
     durability: { timeoutMs: 75 * 60_000 },
