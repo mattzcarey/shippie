@@ -1,17 +1,21 @@
 import { type AgentProfile, defineAgentProfile } from '@flue/runtime'
-import type { QaConfig } from '../qa/config'
-import { buildDriverInstructions } from '../qa/instructions'
 import { createRunSpecTool } from '../tools/run-spec'
+import type { QaConfig } from './config'
+import { buildDriverInstructions } from './instructions'
 
 /** Cheap "hands" model for the per-flow drivers — judgment stays with the opus lead. */
 const DRIVER_MODEL = 'anthropic/claude-sonnet-4-6'
 
 /**
- * `browser-driver` — a subagent profile the lead fans out to, ONE per catalogued
+ * `browser-driver` — a subagent PROFILE the lead fans out to, ONE per catalogued
  * flow. Each driver launches its OWN headless Chrome over CDP (the `chrome-cdp`
  * skill auto-discovers from the inherited workspace cwd), drives its single flow,
  * writes a black-box `e2e/tests/<slug>.cdp.mjs` (importing ../cdp-client.mjs),
  * verifies it green with `run_spec`, and returns a JSON verdict to the lead.
+ *
+ * This lives in src/qa/ (NOT src/agents/): flue auto-discovers every src/agents/*.ts
+ * as a top-level agent that must default-export createAgent(); a subagent profile is
+ * not that — it is passed to the lead's `subagents: [...]`.
  *
  * Factory because it needs `cfg` for `createRunSpecTool` + model resolution.
  *

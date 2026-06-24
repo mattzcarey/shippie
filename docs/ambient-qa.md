@@ -1301,3 +1301,24 @@ what the agent did, and run anywhere `node` + system Chrome exist (no browser do
 
 **Bottom line: the pivot is verified end-to-end, live, with both model backends.** Tests are dependency-free
 CDP scripts, external HTTPS works through a TLS-inspecting proxy, and runs emit a playable \`session.mp4\`.
+
+### 2026-06-24 — Architecture: shippie is self-contained; the TARGET is what varies
+
+**LOCKED clarification (maintainer):** shippie runs in **its own fixed environment** (node + Chrome + ffmpeg,
+Linux/macOS — bash-land). The **target runs in the target's environment**; the two talk **over a wire**.
+shippie never becomes the target's OS/runtime.
+- **Web app:** the app runs wherever the dev runs it (any OS) and exposes a **URL**; shippie points its
+  browser at that URL. The only per-target knob on shippie's side is **the browser it hands the agent**
+  (size/device) → \`E2E_VIEWPORT\` (\`1280x900\`|\`375x812@2\`|mobile|tablet|desktop), wired through
+  cdp-client + \`SHIPPIE_QA_VIEWPORT\` + the qa action \`VIEWPORT\` input.
+- **Non-web (e.g. a Rust lib):** the lib runs on its own matrix/VM (its env); shippie interacts via a
+  different dev tool (a terminal) — a later phase. **Cross-OS is therefore a property of where the TARGET
+  runs (its CI matrix / a provisioned VM via the Compute/target seam), NOT of shippie.** So we **dropped the
+  win32 Chrome path** — shippie's browser only ever runs in shippie's env (the `flue` bash tool itself uses
+  cmd.exe on win32 but real bash on mac/linux, so the bash-only chrome-cdp skill is mac/linux anyway).
+- **Container vs npm (decided): npm-package + GitHub Action is the PRIMARY, lightweight path** — the runner
+  *is* shippie's fixed env (ubuntu ships Chrome; ffmpeg is one apt step; node always; no 187 MB Playwright
+  download now). The **Docker image is OPTIONAL** — for local runs without installing Chrome/ffmpeg, and the
+  future hosted-VM product. No forced container overhead.
+- **Env-awareness:** \`buildQaInstructions\` injects \`process.platform\` so the agent knows its own shell
+  (setsid on linux, nohup+disown on macOS) — about *shippie's* env, not the target's.

@@ -5,7 +5,7 @@ import { buildQaInstructions } from '../qa/instructions'
 import { createCatalogFlowsTool } from '../tools/catalog-flows'
 import { createOpenPrTool } from '../tools/open-pull-request'
 import { createRunSpecTool } from '../tools/run-spec'
-import { browserDriverProfile } from './qa-browser-driver'
+import { browserDriverProfile } from '../qa/browser-driver'
 
 /**
  * Shippie QA lead (depth 0). It explores the repo, catalogs flows, then FANS OUT
