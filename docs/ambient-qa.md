@@ -1173,3 +1173,44 @@ discovery — see §3a). The repo has **no `.agents/` dir yet** — greenfield.
   Pages); cross-OS video = deterministic replay only (agent session video is ubuntu-only); single
   `E2E_BASE_URL` + don't-clobber an existing target `playwright.config.ts`; P0 smoke notes Node-22 global
   `WebSocket` + a `cmd` Windows leg for path-quoting.
+
+### 2026-06-24 — v0 BUILT (P0 → P1 → v0a → v0b) on branch `feat/ambient-qa`
+
+Implemented the full v0 per the plan above. Each phase is its own commit; all repo gates
+(`oxlint`, `oxfmt --check`, `tsc --noEmit`, `flue build`, `vitest`) are green after each.
+
+- **CDP feasibility proven locally first.** Launched headless Chrome and drove it over CDP with
+  **zero deps** (Node's built-in `WebSocket`), from a *separate* shell call than the launch —
+  confirming both the browser strategy and that a backgrounded browser survives across `bash` calls.
+- **P0 — `.github/workflows/qa-smoke.yml`** (`6a82745`/`697b41e`): throwaway `[ubuntu,windows,macos]`
+  matrix that launches headless Chrome + drives one CDP command. Confirms the LOCKED open
+  investigation on real runners (manual `workflow_dispatch`; delete after).
+- **P1 — `src/skills/chrome-cdp/`** (`783902d`): vendored + **patched** `cdp.mjs` — endpoint discovery
+  via `--port`/`$CDP_PORT` over `/json/version` (replacing the upstream macOS-only path),
+  `--ws-endpoint`/`--headers` remote seam, per-PORT daemon sockets/cache, and a new
+  `fill <target> <selector> <text>`. SKILL.md rewritten to the real argv + launch hygiene.
+  **Verified end-to-end against real Chrome** (list/nav/eval/fill/click/snap/shot); opt-in
+  (`QA_CDP_E2E=1`) integration test drives real Chrome. `src/skills/**` excluded from oxlint/oxfmt.
+- **v0a — the agent spine** (`3b999cb`): `src/agents/qa-lead.ts` (single non-subagent lead, opus/high,
+  75m `durability`, `compaction.keepRecentTokens`), `src/workflows/qa.ts` (explore → catalog → drive →
+  self-verify; `materializeSkill` + `ensurePlaywrightConfig` at start), `src/qa/{config,catalog,exec,
+  skill,scaffold,instructions}.ts`, tools `catalog_flows` + `run_spec`. `sendQaStarted` telemetry; `qa`
+  npm script; `@playwright/test` devDep. `flue build` discovers `qa-lead` + `qa`. Tests: config + catalog.
+- **v0b — operational shell** (`6b87e9e` PR machinery + seams; `00cb7cd` packaging + ops):
+  `pr-policy.ts` (`decideTier` 3-tier bar + `isoWeekBranch` dedupe), `pr.ts` (`openOrUpdatePr` via the
+  octokit git-DB API: blobs→tree→commit→ref, update-existing, empty-diff skip; persists `last-pr.json`
+  for the Action output seam), `open_pull_request` tool wired into the lead (missing-coverage tier),
+  `providers/{browser,compute}.ts` (local-now/remote-later seam interfaces + local defaults), the
+  `Dockerfile` monolith + `scripts/entrypoint.sh` (does NOT launch chrome) + `.dockerignore`,
+  `qa/action.yml` (composite; outputs branch/changed/pr_url from `last-pr.json`), and
+  `bin/shippie.mjs` `qa` / `qa init`. `files` ships `src/skills`. Tests: pr-policy + openOrUpdatePr
+  (open/empty/update/local).
+
+**Verified:** all gates green (91 tests: 89 pass + 2 opt-in CDP skipped); `flue build` discovers the new
+agent + workflow; patched CDP client drives real Chrome; `shippie qa init` scaffolds correctly.
+**Not yet verified locally (no blockers):** (1) a full real-model `flue run qa` end-to-end — needs an
+`ANTHROPIC_API_KEY` in the env (none here; same boundary the review migration hit), best exercised in CI;
+(2) `docker build` — the Docker daemon wasn't running this session (the Dockerfile is declarative and
+follows §10). **Deferred to later phases (NOT v0):** the `task`/`browser-driver` fan-out, the healer +
+broken-flow/refactor tiers, the cross-OS matrix, session capture, cross-repo dispatch, and the remote
+provider impls (the seams exist).
