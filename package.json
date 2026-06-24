@@ -14,6 +14,7 @@
     "workspaces": ["apps/*"],
     "scripts": {
         "review": "flue run review --target node",
+        "qa": "flue run qa --target node",
         "dev": "flue dev --target node",
         "build": "flue build --target node",
         "start": "node dist/server.mjs",
@@ -63,6 +64,7 @@
         "@changesets/changelog-github": "^0.7.0",
         "@changesets/cli": "^2.31.0",
         "@flue/cli": "1.0.0-beta.1",
+        "@playwright/test": "^1.49.0",
         "@types/node": "^22.10.0",
         "@types/picomatch": "^4.0.0",
         "oxfmt": "^0.56.0",

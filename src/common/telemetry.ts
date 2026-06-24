@@ -45,3 +45,41 @@ export const sendReviewStarted = (input: TelemetryInput): void => {
     signal: AbortSignal.timeout(3000),
   }).catch(() => {})
 }
+
+/** Anonymous, opt-out telemetry for the QA agent (no `reviewed` count). */
+export interface QaTelemetryInput {
+  enabled: boolean
+  repoSeed: string
+  platform: string
+  model: string
+}
+
+/**
+ * Fire-and-forget anonymous "qa_started" event. Mirrors sendReviewStarted: never
+ * throws, never blocks, aborts after 3s, and sends no code or file contents —
+ * only an anonymized repo id, the platform, the model, and host info.
+ */
+export const sendQaStarted = (input: QaTelemetryInput): void => {
+  if (!input.enabled) return
+
+  const event = {
+    event_type: 'qa_started',
+    run_id: randomUUID(),
+    repo_id: anonId(input.repoSeed),
+    platform: input.platform,
+    model: input.model,
+    system: {
+      platform: process.platform,
+      arch: process.arch,
+      node_version: process.version,
+      shippie_version: process.env.npm_package_version ?? 'unknown',
+    },
+  }
+
+  void fetch(TELEMETRY_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(event),
+    signal: AbortSignal.timeout(3000),
+  }).catch(() => {})
+}
