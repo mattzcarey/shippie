@@ -1214,3 +1214,31 @@ agent + workflow; patched CDP client drives real Chrome; `shippie qa init` scaff
 follows §10). **Deferred to later phases (NOT v0):** the `task`/`browser-driver` fan-out, the healer +
 broken-flow/refactor tiers, the cross-OS matrix, session capture, cross-repo dispatch, and the remote
 provider impls (the seams exist).
+
+### 2026-06-24 — v0 VERIFIED end-to-end with a real model (gpt-5.5 AND kimi-k2.7-code)
+
+Ran the full autonomous loop live in the **dockerised monolith** against a local HTTP app, with two
+different model backends — both reached a green spec:
+
+| Model | Result |
+|---|---|
+| `openai/gpt-5.5` | catalog → drive over CDP → black-box spec → `run_spec` **green** |
+| `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.7-code` | same, end-to-end |
+
+Both authored clean black-box specs (`getByRole`/`getByLabel`/`getByText`, relative `goto`, value
+assertions) and self-verified them with `run_spec` before finishing. The PR step correctly no-op'd on a
+local run (no GitHub target). This closes the "full real-model run" item above.
+
+- **Docker fix (the monolith now runs):** the entrypoint runs the **prebuilt `dist/server.mjs`** (via
+  `shippie qa`), NOT `npx flue run` — `@flue/cli` eagerly imports miniflare→workerd, whose platform binary
+  (`@cloudflare/workerd-<arch>`) npm's optional-deps bug skipped on the linux/arm64 image. The prebuilt
+  server needs only `@flue/runtime` at runtime, sidestepping the whole native-binary class. `npm install`
+  (not `npm ci`) in the image (the Linux lockfile omits optional deps, same as the CI workflows). Build dist
+  on the host (`npm run build`) before `docker build`. Added a portable `launch-chrome.sh` (setsid on Linux,
+  nohup+disown on macOS) to the skill.
+- **Environment caveat (not a bug):** behind a corporate **TLS-inspecting proxy**, external HTTPS targets
+  (e.g. shippie.dev) fail from the container with `SELF_SIGNED_CERT_IN_CHAIN` (OpenAI is allowlisted, so the
+  model works). QA-ing external HTTPS from behind such a proxy needs a cert-tolerance flag
+  (`chrome --ignore-certificate-errors` + Playwright `ignoreHTTPSErrors`, env-gated — also useful for
+  staging/self-signed). On GitHub-hosted runners (no such proxy) external targets work directly; local HTTP
+  targets are proxy-immune (used for this verification).
