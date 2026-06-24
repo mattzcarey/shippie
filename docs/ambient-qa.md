@@ -11,6 +11,14 @@
 
 ---
 
+> **PIVOT UPDATE (2026-06-24):** §1–§9 below were written for a Playwright-based design.
+> Playwright has since been **dropped** — committed tests are now dependency-free CDP scripts
+> (`e2e/tests/*.cdp.mjs` importing `../cdp-client.mjs`), `run_spec` is `node <test>`, and the image
+> carries chromium + ffmpeg (no Playwright). The authoritative contract is `src/qa/instructions.ts`
+> plus the Change Log entry "Playwright DROPPED → dependency-free CDP tests". Read the body for the
+> architecture/rationale, but mentally substitute "Playwright spec" → "CDP test" and ignore the
+> `playwright.config` / `npx playwright test` references.
+
 ## 1. Goal
 
 Turn Shippie into an **ambient QA agent** that does for *end-to-end QA* what `shippie review` does for

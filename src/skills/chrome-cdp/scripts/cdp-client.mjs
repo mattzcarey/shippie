@@ -13,7 +13,7 @@
 //   finally { await b.close() }
 
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
 
@@ -118,7 +118,7 @@ const evalValue = async (cdp, expression) => {
 export async function open(opts = {}) {
   const baseURL = opts.baseURL ?? process.env.E2E_BASE_URL ?? ''
   const chromeBin = opts.chromeBin ?? resolveChrome()
-  const port = opts.port ?? 9222 + Math.floor(Math.random() * 1000)
+  const requestedPort = opts.port ?? 0 // 0 → Chrome picks a free port (avoids collisions)
   const ignoreCertErrors = opts.ignoreCertErrors ?? process.env.CDP_STRICT_TLS !== '1'
   const artifactsDir = opts.artifactsDir ?? process.env.E2E_ARTIFACTS_DIR ?? 'e2e/.artifacts'
   const wantVideo = opts.video !== false
@@ -131,16 +131,48 @@ export async function open(opts = {}) {
     '--no-sandbox',
     '--disable-dev-shm-usage',
     '--hide-scrollbars',
-    `--remote-debugging-port=${port}`,
+    `--remote-debugging-port=${requestedPort}`,
     `--user-data-dir=${profile}`,
   ]
   if (ignoreCertErrors) flags.push('--ignore-certificate-errors')
   flags.push('about:blank')
   const proc = spawn(chromeBin, flags, { stdio: 'ignore' })
+  let exited = false
+  proc.on('exit', () => {
+    exited = true
+  })
 
-  // Wait for the DevTools endpoint + a page target.
+  // Chrome writes the chosen port to <profile>/DevToolsActivePort (line 1). Reading it
+  // (with --remote-debugging-port=0) avoids port collisions / attaching to the wrong
+  // Chrome by construction, and proc.on('exit') lets us fail fast if Chrome dies.
+  const portFile = join(profile, 'DevToolsActivePort')
+  let port
+  for (let i = 0; i < 200; i++) {
+    if (exited) throw new Error('Chrome exited before its DevTools endpoint was ready')
+    try {
+      const first = readFileSync(portFile, 'utf8').trim().split('\n')[0]
+      if (first) {
+        port = first
+        break
+      }
+    } catch {
+      // not written yet
+    }
+    await sleep(100)
+  }
+  if (!port) {
+    try {
+      proc.kill('SIGKILL')
+    } catch {
+      // ignore
+    }
+    throw new Error('Chrome DevTools port file never appeared')
+  }
+
+  // Find a page target to attach to.
   let pageWs
   for (let i = 0; i < 100; i++) {
+    if (exited) throw new Error('Chrome exited before a page target appeared')
     try {
       const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()
       const page = list.find((t) => t.type === 'page')
@@ -199,7 +231,8 @@ export async function open(opts = {}) {
   const client = {
     async goto(path) {
       const url = resolveUrl(path)
-      await cdp.send('Page.navigate', { url })
+      const res = await cdp.send('Page.navigate', { url })
+      if (res.errorText) throw new Error(`Navigation failed: ${res.errorText} (${url})`)
       // wait for document ready
       const deadline = Date.now() + 30_000
       while (Date.now() < deadline) {
@@ -329,8 +362,10 @@ const assembleVideo = (framesDir, outFile) => {
         '-y',
         '-framerate',
         '6',
+        '-pattern_type',
+        'glob',
         '-i',
-        join(framesDir, 'frame-%05d.jpg'),
+        join(framesDir, 'frame-*.jpg'),
         '-c:v',
         'libx264',
         '-pix_fmt',

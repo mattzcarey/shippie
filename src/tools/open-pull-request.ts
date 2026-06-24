@@ -26,7 +26,8 @@ export const createOpenPrTool = (cfg: QaConfig) =>
       paths: v.pipe(
         v.array(v.string()),
         v.description(
-          'Repo-relative paths written this session (the spec + its e2e/specs/*.md)'
+          'Repo-relative paths to commit: the test (e2e/tests/<slug>.cdp.mjs) + its e2e/specs/*.md. ' +
+            'The driver e2e/cdp-client.mjs is auto-included so the suite runs standalone.'
         )
       ),
       branch: v.optional(v.string()),

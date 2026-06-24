@@ -20,16 +20,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CHROME_BIN=/usr/bin/chromium
 
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
 # Prod deps only: the entrypoint runs the PREBUILT server (dist/server.mjs), which needs
 # only @flue/runtime (+ octokit/valibot/picomatch) at runtime. The committed CDP tests are
 # dependency-free (import ../cdp-client.mjs, drive system Chromium) — NO Playwright, NO
-# @flue/cli. `npm install` (not `npm ci`) because the macOS lockfile omits Linux optional
-# deps (see docs/flue-migration.md); omitting devDeps also sidesteps the @flue/cli ->
-# workerd native-binary issue on arm64.
+# @flue/cli. `npm install` (not `npm ci`) tolerates the macOS-generated lockfile omitting
+# Linux-only optional deps (same reason the CI workflows use install); the lock is copied
+# as a reproducibility hint. Omitting devDeps also sidesteps @flue/cli -> workerd on arm64.
 RUN npm install --omit=dev --no-audit --no-fund
 # Copies the repo INCLUDING the prebuilt dist/ — run `npm run build` on the host first.
 COPY . .
+# Fail loudly if dist wasn't prebuilt (the entrypoint runs the prebuilt dist/server.mjs).
+RUN test -f dist/server.mjs || { echo "dist/server.mjs missing — run 'npm run build' before 'docker build'" >&2; exit 1; }
 
 # The agent's bash launches Chrome per-flow on its own port; the entrypoint does NOT
 # launch a browser (a single image-launched chrome would collide with the fan-out).

@@ -5,7 +5,9 @@
 # @cloudflare/workerd-<platform> binary) that `npx flue run` would hit. The agent
 # owns the Chrome lifecycle (launches it per-flow over CDP); tini (PID 1) reaps it.
 set -euo pipefail
-WORKDIR="${SHIPPIE_QA_WORKSPACE:-/app/.qa-run}"
+# Honor `docker run -w <dir>` (e.g. -v "$PWD":/work -w /work) so output lands in the
+# mounted repo; fall back to the current dir, then /app/.qa-run.
+WORKDIR="${SHIPPIE_QA_WORKSPACE:-${PWD:-/app/.qa-run}}"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 exec node /app/bin/shippie.mjs qa

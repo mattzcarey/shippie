@@ -53,6 +53,9 @@ outputs:
   pr_url:
     description: "URL of the opened/updated PR (empty if none)"
     value: ${{ steps.qa.outputs.pr_url }}
+  base_url:
+    description: "The base URL the suite targets (E2E_BASE_URL) — for the verify job"
+    value: ${{ steps.qa.outputs.base_url }}
 runs:
   using: "composite"
   steps:
@@ -93,6 +96,7 @@ runs:
           --payload "{\"platform\":\"github\",\"workspace\":\"$GITHUB_WORKSPACE\"}"
         # The open_pull_request tool persists branch/changed/prUrl here — robust
         # source of truth for the verify job's inputs (avoids parsing stdout).
+        echo "base_url=${SHIPPIE_QA_TARGET:-}" >> "$GITHUB_OUTPUT"
         RESULT="$GITHUB_WORKSPACE/.shippie/qa/last-pr.json"
         if [ -f "$RESULT" ]; then
           echo "branch=$(jq -r '.branch // ""' "$RESULT")" >> "$GITHUB_OUTPUT"

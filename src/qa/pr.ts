@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Octokit } from 'octokit'
@@ -22,6 +23,19 @@ export interface OpenPrResult {
 }
 
 type Gh = Octokit['rest']
+
+const CDP_CLIENT = 'e2e/cdp-client.mjs'
+
+/** If the PR commits a CDP test, also commit the driver it imports (../cdp-client.mjs). */
+const withClient = (workspace: string, paths: string[]): string[] => {
+  const hasTest = paths.some(
+    (p) => p.endsWith('.cdp.mjs') && p.replace(/\\/g, '/').includes('e2e/tests/')
+  )
+  if (hasTest && !paths.includes(CDP_CLIENT) && existsSync(join(workspace, CDP_CLIENT))) {
+    return [...paths, CDP_CLIENT]
+  }
+  return paths
+}
 
 /** Commit the given files onto `branch` via the git database API (no local git creds). */
 const commitFiles = async (
@@ -106,12 +120,15 @@ export const openOrUpdatePr = async (
   const { owner, repo, token } = cfg.github
   const rest = new Octokit({ auth: token }).rest
 
+  // Auto-include the CDP driver so the committed suite runs standalone in the verify job.
+  const paths = withClient(cfg.workspace, a.paths)
+
   const head = await commitFiles(rest, {
     owner,
     repo,
     branch,
     workspace: cfg.workspace,
-    paths: a.paths,
+    paths,
     message: a.title,
   })
   if (!head.changed) return { changed: false, branch, prUrl: null, reason: 'empty diff' }

@@ -97,6 +97,7 @@ jobs:
     outputs:
       branch: \${{ steps.qa.outputs.branch }}
       changed: \${{ steps.qa.outputs.changed }}
+      base_url: \${{ steps.qa.outputs.base_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,7 +106,10 @@ jobs:
         uses: mattzcarey/shippie/qa@v0
         with:
           MODEL: \${{ inputs.model || 'anthropic/claude-opus-4-8' }}
-          TARGET: \${{ inputs.target }}
+          # On the weekly cron inputs.target is empty — set the SHIPPIE_QA_TARGET repo
+          # variable (Settings → Secrets and variables → Actions → Variables) to the URL
+          # to QA, or pass -f target=... on workflow_dispatch.
+          TARGET: \${{ inputs.target || vars.SHIPPIE_QA_TARGET }}
           SCOPE: \${{ inputs.scope }}
           ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
@@ -124,14 +128,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Run committed CDP e2e tests (node + system Chrome; no deps)
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+      - name: Install ffmpeg (screencast → mp4)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Run committed CDP e2e tests (node + Chrome; no deps)
         env:
-          E2E_BASE_URL: \${{ inputs.target }}
+          E2E_BASE_URL: \${{ needs.author.outputs.base_url }}
+          CHROME_BIN: \${{ steps.chrome.outputs.chrome-path }}
           CDP_IGNORE_CERT_ERRORS: "1"
         run: |
           shopt -s nullglob
+          tests=(e2e/tests/*.cdp.mjs)
+          if [ \${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.cdp.mjs found"; exit 1; fi
           fail=0
-          for f in e2e/tests/*.cdp.mjs; do
+          for f in "\${tests[@]}"; do
             echo "== $f =="
             node "$f" || fail=1
           done

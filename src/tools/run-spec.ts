@@ -23,18 +23,28 @@ export const createRunSpecTool = (cfg: QaConfig) =>
         v.minLength(1),
         v.description('Path to the .cdp.mjs test, relative to repo root')
       ),
+      baseUrl: v.optional(
+        v.pipe(
+          v.string(),
+          v.description(
+            'Base URL the test targets (E2E_BASE_URL). Pass the booted dev-server URL ' +
+              'when no global target was configured; otherwise the configured target is used.'
+          )
+        )
+      ),
     }),
-    execute: async ({ specPath }) => {
-      const res = await runShell('node', [specPath], {
-        cwd: cfg.workspace,
-        env: {
-          E2E_BASE_URL: cfg.target,
-          CHROME_BIN: cfg.chromeBin,
-          E2E_ARTIFACTS_DIR: 'e2e/.artifacts',
-          // QA tolerates self-signed / corporate-proxy certs on external HTTPS targets.
-          CDP_IGNORE_CERT_ERRORS: '1',
-        },
-      })
+    execute: async ({ specPath, baseUrl }) => {
+      const target = baseUrl ?? cfg.target
+      // Only set E2E_BASE_URL when defined — an empty value would make relative goto()
+      // navigate to an invalid URL (the client then fails fast with a clear message).
+      const env: Record<string, string | undefined> = {
+        CHROME_BIN: cfg.chromeBin,
+        E2E_ARTIFACTS_DIR: 'e2e/.artifacts',
+        // QA tolerates self-signed / corporate-proxy certs on external HTTPS targets.
+        CDP_IGNORE_CERT_ERRORS: '1',
+      }
+      if (target) env.E2E_BASE_URL = target
+      const res = await runShell('node', [specPath], { cwd: cfg.workspace, env })
       return JSON.stringify({
         ok: res.exitCode === 0,
         exitCode: res.exitCode,
