@@ -1242,3 +1242,28 @@ local run (no GitHub target). This closes the "full real-model run" item above.
   (`chrome --ignore-certificate-errors` + Playwright `ignoreHTTPSErrors`, env-gated — also useful for
   staging/self-signed). On GitHub-hosted runners (no such proxy) external targets work directly; local HTTP
   targets are proxy-immune (used for this verification).
+
+### 2026-06-24 — Playwright DROPPED → dependency-free CDP tests (maintainer call)
+
+Playwright was too heavy (the `@playwright/test` dep + a 187 MB Chromium download dominated the image
+build). Pivoted so **the CDP CLI is both the hands AND the contract**: committed tests are small node
+scripts that drive Chrome through our own client. One browser, one driver; tests are a readable replay of
+what the agent did, and run anywhere `node` + system Chrome exist (no browser download).
+
+- **New `src/skills/chrome-cdp/scripts/cdp-client.mjs`** — a dependency-free, importable CDP driver
+  (Node built-in WebSocket). `open()` self-launches headless Chrome, is **cert-tolerant by default**
+  (`--ignore-certificate-errors`, so external HTTPS works behind TLS-inspecting proxies / self-signed),
+  and **records a screencast by default** → `close()` assembles it to `session.mp4` via ffmpeg (degrades
+  to frames if ffmpeg is absent). API: `goto/url/title/text/html/eval/fill/type/click/clickAt/press/
+  waitFor/waitForText/snapshot/shot/close`.
+- **Committed tests** = `e2e/tests/<slug>.cdp.mjs` importing `../cdp-client.mjs` + `node:assert`, exit 0/1.
+  The client is materialized to `e2e/cdp-client.mjs` and committed with the tests, so the suite runs with
+  just `node` (no install) in CI or locally. `run_spec` now runs `node <test>`; the verify job loops
+  `node e2e/tests/*.cdp.mjs` (no Playwright, no browser install — uses system Chrome).
+- **Removed:** `@playwright/test` dep, the scaffolded `playwright.config.ts`, and the Playwright install
+  steps. **Dockerfile:** added `ffmpeg`, `npm install --omit=dev` (prebuilt server needs only
+  @flue/runtime), dropped the Chromium download — smaller, faster image.
+- **External HTTPS enabled:** `CDP_IGNORE_CERT_ERRORS=1` wired into the agent sandbox + `launch-chrome.sh`
+  + `run_spec`, and the client defaults to cert-tolerant (override with `CDP_STRICT_TLS=1`).
+- Verified: gates green (89 + 3 opt-in); the cdp-client drives real Chrome end-to-end (committed opt-in
+  test); image rebuilt without the Playwright download. Live model runs re-verified next.
