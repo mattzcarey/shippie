@@ -29,6 +29,10 @@ COPY package.json ./
 RUN npm install --no-audit --no-fund --include=dev
 # Playwright's own pinned Chromium for run_spec (deterministic, separate from CHROME_BIN).
 RUN npx playwright install chromium
+# Copies the repo INCLUDING the prebuilt dist/ — run `npm run build` on the host first.
+# The entrypoint runs the prebuilt server (dist/server.mjs), so the agent loop needs only
+# @flue/runtime at runtime (no @flue/cli/vite/workerd), sidestepping native optional-dep
+# issues that `npx flue run` hits on some arches (e.g. a missing @cloudflare/workerd-*).
 COPY . .
 
 # The agent's bash launches Chrome per-flow on its own port; the entrypoint does NOT

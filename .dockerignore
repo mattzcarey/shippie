@@ -1,8 +1,8 @@
 node_modules
-dist
 .git
 apps
 e2e
 .shippie
 .flue-vite
+.qa-run
 *.log
