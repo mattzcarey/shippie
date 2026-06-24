@@ -12,7 +12,7 @@ export const createCatalogFlowsTool = (cfg: QaConfig) =>
     name: 'catalog_flows',
     description:
       'Persist the discovered user flows as e2e/specs/<slug>.md (steps + expected outcomes). ' +
-      'The catalog is the backlog the drivers turn into Playwright specs, and a review artifact.',
+      'The catalog is the backlog the drivers turn into CDP tests, and a review artifact.',
     parameters: v.object({
       flows: v.array(
         v.object({

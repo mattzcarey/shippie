@@ -35,7 +35,7 @@ ${f.expected.map((e) => `- ${e}`).join('\n')}
 
 /**
  * Persist the catalogued flows as `e2e/specs/<slug>.md` — the human-readable
- * backlog the drivers turn into Playwright specs, and a review artifact.
+ * backlog the drivers turn into CDP tests, and a review artifact.
  */
 export const writeCatalog = async (workspace: string, flows: Flow[]): Promise<string> => {
   const dir = join(workspace, 'e2e', 'specs')

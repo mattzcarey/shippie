@@ -55,8 +55,9 @@ Notes:
 - Raw **`type <target> <text>`** has **no selector**; it inserts at whatever currently has focus.
 - **`click`** is `el.click()` via eval — won't fire real-input-only handlers (drag, native pickers);
   use **`clickxy`** with CSS pixels for those.
-- Prefer **`snap`** (accessibility tree) to choose **role-based locators** (`getByRole`/`getByLabel`/
-  `getByText`) when you then write the Playwright spec — far more resilient than coordinates.
+- Prefer **`snap`** (accessibility tree) to find stable, semantic elements (by role / name / label),
+  then translate them to robust **CSS selectors** (e.g. `input[name=email]`, `button[type=submit]`,
+  `[aria-label="Email"]`) for the committed CDP test — far more resilient than coordinates.
 
 ## 3. Remote browser override seam (do NOT use in v0)
 

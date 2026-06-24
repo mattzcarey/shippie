@@ -64,7 +64,6 @@
         "@changesets/changelog-github": "^0.7.0",
         "@changesets/cli": "^2.31.0",
         "@flue/cli": "1.0.0-beta.1",
-        "@playwright/test": "^1.49.0",
         "@types/node": "^22.10.0",
         "@types/picomatch": "^4.0.0",
         "oxfmt": "^0.56.0",

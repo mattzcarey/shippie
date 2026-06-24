@@ -5,8 +5,7 @@ import { connectMcpServers } from '../mcp/connect'
 import { type QaPayload, resolveQaConfig } from '../qa/config'
 import { buildQaKickoff } from '../qa/instructions'
 import { readLastPr } from '../qa/pr'
-import { ensurePlaywrightConfig } from '../qa/scaffold'
-import { materializeSkill } from '../qa/skill'
+import { materializeClient, materializeSkill } from '../qa/skill'
 
 /** Exposes `POST /workflows/qa` on the built server (`node dist/server.mjs`). */
 export const route: WorkflowRouteHandler = async (_c, next) => next()
@@ -35,7 +34,7 @@ const parseResult = (text: string | undefined): Record<string, unknown> => {
  *   flue run qa --target node --payload '{"platform":"local","target":"http://localhost:5173"}'
  *
  * Explores the repo, catalogs flows, drives the top flow in headless Chrome over
- * CDP, writes + self-verifies a Playwright spec, and returns a JSON result.
+ * CDP, writes + self-verifies a CDP test (../cdp-client.mjs), and returns a JSON result.
  */
 export async function run({ init, payload, env }: FlueContext<QaPayload>) {
   const cfg = resolveQaConfig(payload, env as NodeJS.ProcessEnv)
@@ -47,9 +46,10 @@ export async function run({ init, payload, env }: FlueContext<QaPayload>) {
     model: cfg.model,
   })
 
-  // Make the CDP skill discoverable + ensure a Playwright config exists (never clobber one).
+  // Make the CDP skill discoverable (agent's interactive CLI) + drop the cdp-client
+  // the committed tests import (e2e/cdp-client.mjs).
   await materializeSkill(cfg.workspace)
-  await ensurePlaywrightConfig(cfg.workspace)
+  await materializeClient(cfg.workspace)
 
   const mcp = await connectMcpServers(cfg.mcpServers)
   try {

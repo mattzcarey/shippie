@@ -1,5 +1,5 @@
 name: "Shippie QA 🧪"
-description: "Autonomous end-to-end QA agent: explore, drive flows in headless Chrome over CDP, write + verify Playwright specs, open a PR"
+description: "Autonomous end-to-end QA agent: explore, drive flows in headless Chrome over CDP, write + verify dependency-free CDP tests, open a PR"
 author: "Matt Carey"
 inputs:
   MODEL:
@@ -63,13 +63,9 @@ runs:
     - name: Install Shippie
       shell: bash
       # The flue project root is the shippie checkout root = parent of this action dir
-      # (this action lives at <root>/qa). --include=dev so @flue/cli + @playwright/test
-      # (devDeps) are present even under NODE_ENV=production.
+      # (this action lives at <root>/qa). --include=dev so @flue/cli (a devDep, needed
+      # by `npx flue run qa`) is present even under NODE_ENV=production.
       run: npm install --prefix "$(dirname "$GITHUB_ACTION_PATH")" --include=dev --no-audit --no-fund --loglevel=error
-
-    - name: Install Playwright Chromium (for run_spec self-verify)
-      shell: bash
-      run: npx --prefix "$(dirname "$GITHUB_ACTION_PATH")" playwright install --with-deps chromium
 
     - name: Run Shippie QA 🧪
       id: qa

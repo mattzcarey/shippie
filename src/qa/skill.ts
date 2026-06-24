@@ -35,3 +35,16 @@ export const materializeSkill = async (workspace: string): Promise<void> => {
   await mkdir(dest, { recursive: true })
   await cp(findSkillSrc(), dest, { recursive: true })
 }
+
+/**
+ * Copy the dependency-free cdp-client into `<workspace>/e2e/cdp-client.mjs` — the
+ * driver that committed CDP tests import as `../cdp-client.mjs`. It is committed
+ * alongside the tests so the suite runs with just `node` (no install), in CI or
+ * locally. (The agent's interactive CLI lives separately under .agents/skills.)
+ */
+export const materializeClient = async (workspace: string): Promise<void> => {
+  const src = join(findSkillSrc(), 'scripts', 'cdp-client.mjs')
+  const dest = join(workspace, 'e2e', 'cdp-client.mjs')
+  await mkdir(dirname(dest), { recursive: true })
+  await cp(src, dest)
+}

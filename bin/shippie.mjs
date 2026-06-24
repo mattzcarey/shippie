@@ -5,7 +5,7 @@
  * `shippie review` runs the prebuilt review workflow against the current directory
  * (local = STAGED diff; CI = the PR). `shippie qa` runs the autonomous QA workflow
  * (explore → catalog flows → drive in headless Chrome over CDP → write+verify a
- * Playwright spec → open a missing-coverage PR). Both boot the bundled flue server
+ * CDP test → open a missing-coverage PR). Both boot the bundled flue server
  * (dist/server.mjs) on a local port, POST the workflow once, print the JSON result,
  * and exit.
  *
@@ -30,7 +30,7 @@ Usage:
   shippie review     Review the current repo (local = staged diff; CI = the PR)
   shippie qa         Autonomous QA: explore, drive flows in headless Chrome, write+verify e2e tests
   shippie init       Scaffold a GitHub Actions workflow that reviews every pull request
-  shippie qa init    Scaffold a weekly + on-demand QA workflow (+ playwright.config.ts)
+  shippie qa init    Scaffold a weekly + on-demand QA workflow (+ e2e/.gitignore)
   shippie configure  Deprecated alias for "init" (removed in the next major version)
 
 Set a model + provider key first, e.g.:
@@ -63,8 +63,8 @@ jobs:
 const QA_WORKFLOW_TEMPLATE = `name: Shippie QA 🧪
 
 # Weekly + on-demand autonomous QA. The "author" job runs the agent (Linux, holds
-# the model key) and opens a PR; the "verify" job re-runs the committed specs with
-# plain Playwright (no agent, no key) so the PR's own checks prove them green.
+# the model key) and opens a PR; the "verify" job re-runs the committed CDP tests
+# with plain node + system Chrome (no agent, no key) so the PR's checks prove them green.
 
 on:
   schedule:
@@ -124,38 +124,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test
+      - name: Run committed CDP e2e tests (node + system Chrome; no deps)
         env:
           E2E_BASE_URL: \${{ inputs.target }}
+          CDP_IGNORE_CERT_ERRORS: "1"
+        run: |
+          shopt -s nullglob
+          fail=0
+          for f in e2e/tests/*.cdp.mjs; do
+            echo "== $f =="
+            node "$f" || fail=1
+          done
+          exit $fail
       - if: \${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-ubuntu-latest
-          path: |
-            e2e/report/
-            e2e/.artifacts/
+          name: e2e-artifacts
+          path: e2e/.artifacts/
           retention-days: 30
-`
-
-const QA_PLAYWRIGHT_CONFIG = `import { defineConfig, devices } from '@playwright/test'
-
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
-
-export default defineConfig({
-  testDir: './e2e/tests',
-  outputDir: './e2e/.artifacts',
-  fullyParallel: true,
-  retries: process.env.CI ? 2 : 0,
-  reporter: [
-    ['html', { outputFolder: 'e2e/report', open: 'never' }],
-    ['json', { outputFile: 'e2e/report/results.json' }],
-    ['list'],
-  ],
-  use: { trace: 'on', video: 'on', screenshot: 'on', baseURL: BASE },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-})
 `
 
 const writeIfAbsent = (path, content, label) => {
@@ -208,7 +194,7 @@ Run reviews locally with: shippie review
   process.exit(0)
 }
 
-// `shippie qa init` — scaffold the QA workflow + a starter Playwright config.
+// `shippie qa init` — scaffold the QA workflow + e2e/.gitignore.
 if (command === 'qa' && sub === 'init') {
   const force = process.argv.includes('--force')
   const workflowPath = join(process.cwd(), '.github', 'workflows', 'shippie-qa.yml')
@@ -222,25 +208,20 @@ if (command === 'qa' && sub === 'init') {
   writeFileSync(workflowPath, QA_WORKFLOW_TEMPLATE)
   process.stdout.write(`Created ${relative(process.cwd(), workflowPath)}\n`)
   writeIfAbsent(
-    join(process.cwd(), 'playwright.config.ts'),
-    QA_PLAYWRIGHT_CONFIG,
-    'playwright.config.ts'
-  )
-  writeIfAbsent(
     join(process.cwd(), 'e2e', '.gitignore'),
-    '.artifacts/\nreport/\n',
+    '.artifacts/\n',
     'e2e/.gitignore'
   )
   process.stdout.write(
     `
 Next steps:
   1. Add a model provider key as a repo secret, e.g. ANTHROPIC_API_KEY.
-  2. Install the spec runner:  npm i -D @playwright/test
-  3. Allow Actions to open PRs: Settings → Actions → General →
+  2. Allow Actions to open PRs: Settings → Actions → General →
      "Allow GitHub Actions to create and approve pull requests".
-  4. Run on demand:  gh workflow run shippie-qa.yml -f target=https://your-app.example.com
+  3. Run on demand:  gh workflow run shippie-qa.yml -f target=https://your-app.example.com
 
-Run a QA pass locally with: shippie qa   (set SHIPPIE_QA_TARGET to a running app URL)
+Shippie QA writes dependency-free CDP tests (e2e/tests/*.cdp.mjs + e2e/cdp-client.mjs) that run with
+just node + Chrome — no Playwright. Run a pass locally with: shippie qa  (set SHIPPIE_QA_TARGET).
 `
   )
   process.exit(0)

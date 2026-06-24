@@ -12,7 +12,10 @@ BIN="${CHROME_BIN:-$(command -v google-chrome || command -v google-chrome-stable
   || echo "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")}"
 
 FLAGS=(--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage
-  --remote-debugging-port="$PORT" --user-data-dir="$PROFILE" about:blank)
+  --remote-debugging-port="$PORT" --user-data-dir="$PROFILE")
+# Tolerate self-signed / corporate-proxy certs on external HTTPS targets (QA).
+[ "${CDP_IGNORE_CERT_ERRORS:-}" = "1" ] && FLAGS+=(--ignore-certificate-errors)
+FLAGS+=(about:blank)
 LOG="/tmp/chrome-$PORT.log"
 
 if command -v setsid >/dev/null 2>&1; then

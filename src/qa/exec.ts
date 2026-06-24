@@ -52,7 +52,7 @@ const walk = (dir: string, workspace: string, cap: number, out: string[]): void 
   }
 }
 
-/** Generated Playwright artifacts (trace/video/report) under e2e/, for the verdict. */
+/** Generated CDP-test artifacts (screenshots, session.mp4) under e2e/, for the verdict. */
 export const listArtifacts = (workspace: string, cap = 200): string[] => {
   const out: string[] = []
   for (const d of ['e2e/.artifacts', 'e2e/report']) {
