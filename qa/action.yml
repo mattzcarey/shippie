@@ -1,0 +1,111 @@
+name: "Shippie QA 🧪"
+description: "Autonomous end-to-end QA agent: explore, drive flows in headless Chrome over CDP, write + verify Playwright specs, open a PR"
+author: "Matt Carey"
+inputs:
+  MODEL:
+    description: "Flue model specifier, e.g. anthropic/claude-opus-4-8"
+    required: false
+    default: "anthropic/claude-opus-4-8"
+  TARGET:
+    description: "URL/path under test → E2E_BASE_URL for the generated specs"
+    required: false
+  SCOPE:
+    description: "Flows/areas to prioritize"
+    required: false
+  BRANCH:
+    description: "Override the iso-week PR branch (default shippie-qa/<iso-week>)"
+    required: false
+  THINKING_LEVEL:
+    description: "Reasoning effort: off | minimal | low | medium | high | xhigh"
+    required: false
+  CHROME_BIN:
+    description: "Path to the Chrome/Chromium binary the agent launches (defaults to the runner's)"
+    required: false
+  TELEMETRY:
+    description: "Send anonymous usage telemetry. Set to 'false' to opt out."
+    required: false
+    default: "true"
+  ANTHROPIC_API_KEY:
+    description: "Anthropic API key"
+    required: false
+  OPENAI_API_KEY:
+    description: "OpenAI API key"
+    required: false
+  OPENROUTER_API_KEY:
+    description: "OpenRouter API key"
+    required: false
+  CLOUDFLARE_API_KEY:
+    description: "Cloudflare API token (model 'cloudflare-workers-ai/<model>')"
+    required: false
+  CLOUDFLARE_ACCOUNT_ID:
+    description: "Cloudflare account ID"
+    required: false
+  GITHUB_TOKEN:
+    description: "GitHub token used to commit specs + open the PR"
+    required: true
+outputs:
+  branch:
+    description: "The branch the QA PR was opened/updated on (empty if no PR)"
+    value: ${{ steps.qa.outputs.branch }}
+  changed:
+    description: "'true' if a PR was opened/updated this run"
+    value: ${{ steps.qa.outputs.changed }}
+  pr_url:
+    description: "URL of the opened/updated PR (empty if none)"
+    value: ${{ steps.qa.outputs.pr_url }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+
+    - name: Install Shippie
+      shell: bash
+      # The flue project root is the shippie checkout root = parent of this action dir
+      # (this action lives at <root>/qa). --include=dev so @flue/cli + @playwright/test
+      # (devDeps) are present even under NODE_ENV=production.
+      run: npm install --prefix "$(dirname "$GITHUB_ACTION_PATH")" --include=dev --no-audit --no-fund --loglevel=error
+
+    - name: Install Playwright Chromium (for run_spec self-verify)
+      shell: bash
+      run: npx --prefix "$(dirname "$GITHUB_ACTION_PATH")" playwright install --with-deps chromium
+
+    - name: Run Shippie QA 🧪
+      id: qa
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY || env.OPENAI_API_KEY }}
+        OPENROUTER_API_KEY: ${{ inputs.OPENROUTER_API_KEY || env.OPENROUTER_API_KEY }}
+        CLOUDFLARE_API_KEY: ${{ inputs.CLOUDFLARE_API_KEY || env.CLOUDFLARE_API_KEY }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN || env.GITHUB_TOKEN }}
+        SHIPPIE_MODEL: ${{ inputs.MODEL }}
+        SHIPPIE_QA_TARGET: ${{ inputs.TARGET }}
+        SHIPPIE_QA_SCOPE: ${{ inputs.SCOPE }}
+        SHIPPIE_QA_BRANCH: ${{ inputs.BRANCH }}
+        SHIPPIE_QA_THINKING_LEVEL: ${{ inputs.THINKING_LEVEL }}
+        SHIPPIE_TELEMETRY: ${{ inputs.TELEMETRY }}
+        CHROME_BIN: ${{ inputs.CHROME_BIN }}
+      run: |
+        ROOT="$(dirname "$GITHUB_ACTION_PATH")"
+        npx flue run qa \
+          --root "$ROOT" \
+          --target node \
+          --payload "{\"platform\":\"github\",\"workspace\":\"$GITHUB_WORKSPACE\"}"
+        # The open_pull_request tool persists branch/changed/prUrl here — robust
+        # source of truth for the verify job's inputs (avoids parsing stdout).
+        RESULT="$GITHUB_WORKSPACE/.shippie/qa/last-pr.json"
+        if [ -f "$RESULT" ]; then
+          echo "branch=$(jq -r '.branch // ""' "$RESULT")" >> "$GITHUB_OUTPUT"
+          echo "changed=$(jq -r '.changed // false' "$RESULT")" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$(jq -r '.prUrl // ""' "$RESULT")" >> "$GITHUB_OUTPUT"
+          cat "$RESULT"
+        else
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        fi
+branding:
+  icon: "check-circle"
+  color: "green"

@@ -2,16 +2,20 @@
 /**
  * shippie CLI.
  *
- * `shippie review` runs the prebuilt review workflow against the current
- * directory. It boots the bundled flue server (dist/server.mjs) on a local
- * port, invokes POST /workflows/review once, prints the JSON result, and exits.
- * Locally (platform "local") it reviews your STAGED diff (`git add` first).
+ * `shippie review` runs the prebuilt review workflow against the current directory
+ * (local = STAGED diff; CI = the PR). `shippie qa` runs the autonomous QA workflow
+ * (explore → catalog flows → drive in headless Chrome over CDP → write+verify a
+ * Playwright spec → open a missing-coverage PR). Both boot the bundled flue server
+ * (dist/server.mjs) on a local port, POST the workflow once, print the JSON result,
+ * and exit.
+ *
+ * `shippie init` / `shippie qa init` scaffold the GitHub Actions workflows.
  *
  * Config is read from the environment (same vars as the GitHub Action):
- *   SHIPPIE_MODEL, SHIPPIE_REVIEW_LANGUAGE, SHIPPIE_THINKING_LEVEL,
- *   SHIPPIE_IGNORE, SHIPPIE_CUSTOM_INSTRUCTIONS, SHIPPIE_MCP_SERVERS,
- *   SHIPPIE_TELEMETRY, plus the provider key (ANTHROPIC_API_KEY, OPENAI_API_KEY,
- *   OPENROUTER_API_KEY, or CLOUDFLARE_API_KEY + CLOUDFLARE_ACCOUNT_ID).
+ *   review: SHIPPIE_MODEL, SHIPPIE_REVIEW_LANGUAGE, SHIPPIE_THINKING_LEVEL, …
+ *   qa:     SHIPPIE_QA_MODEL, SHIPPIE_QA_TARGET, SHIPPIE_QA_SCOPE, CHROME_BIN, …
+ *   plus the provider key (ANTHROPIC_API_KEY / OPENAI_API_KEY / OPENROUTER_API_KEY /
+ *   CLOUDFLARE_API_KEY + CLOUDFLARE_ACCOUNT_ID) and GITHUB_TOKEN.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
@@ -20,11 +24,13 @@ import { fileURLToPath } from 'node:url'
 
 const pkgRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 
-const HELP = `shippie — an extensible code review agent (built on flue)
+const HELP = `shippie — an extensible code review + QA agent (built on flue)
 
 Usage:
   shippie review     Review the current repo (local = staged diff; CI = the PR)
-  shippie init       Scaffold a GitHub Actions workflow that runs Shippie on PRs
+  shippie qa         Autonomous QA: explore, drive flows in headless Chrome, write+verify e2e tests
+  shippie init       Scaffold a GitHub Actions workflow that reviews every pull request
+  shippie qa init    Scaffold a weekly + on-demand QA workflow (+ playwright.config.ts)
   shippie configure  Deprecated alias for "init" (removed in the next major version)
 
 Set a model + provider key first, e.g.:
@@ -54,13 +60,124 @@ jobs:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `
 
-const [command = 'review'] = process.argv.slice(2)
+const QA_WORKFLOW_TEMPLATE = `name: Shippie QA 🧪
+
+# Weekly + on-demand autonomous QA. The "author" job runs the agent (Linux, holds
+# the model key) and opens a PR; the "verify" job re-runs the committed specs with
+# plain Playwright (no agent, no key) so the PR's own checks prove them green.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "URL/path to QA (sets E2E_BASE_URL)"
+        required: false
+      scope:
+        description: "Flows/areas to prioritize"
+        required: false
+      model:
+        description: "Flue model"
+        required: false
+        default: "anthropic/claude-opus-4-8"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: shippie-qa
+  cancel-in-progress: false
+
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      branch: \${{ steps.qa.outputs.branch }}
+      changed: \${{ steps.qa.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: qa
+        uses: mattzcarey/shippie/qa@v0
+        with:
+          MODEL: \${{ inputs.model || 'anthropic/claude-opus-4-8' }}
+          TARGET: \${{ inputs.target }}
+          SCOPE: \${{ inputs.scope }}
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+
+  verify:
+    needs: author
+    if: needs.author.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ needs.author.outputs.branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+        env:
+          E2E_BASE_URL: \${{ inputs.target }}
+      - if: \${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ubuntu-latest
+          path: |
+            e2e/report/
+            e2e/.artifacts/
+          retention-days: 30
+`
+
+const QA_PLAYWRIGHT_CONFIG = `import { defineConfig, devices } from '@playwright/test'
+
+const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
+
+export default defineConfig({
+  testDir: './e2e/tests',
+  outputDir: './e2e/.artifacts',
+  fullyParallel: true,
+  retries: process.env.CI ? 2 : 0,
+  reporter: [
+    ['html', { outputFolder: 'e2e/report', open: 'never' }],
+    ['json', { outputFile: 'e2e/report/results.json' }],
+    ['list'],
+  ],
+  use: { trace: 'on', video: 'on', screenshot: 'on', baseURL: BASE },
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+})
+`
+
+const writeIfAbsent = (path, content, label) => {
+  if (existsSync(path)) {
+    process.stdout.write(
+      `  • ${label} already exists — left unchanged (${relative(process.cwd(), path)})\n`
+    )
+    return
+  }
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, content)
+  process.stdout.write(`  • wrote ${relative(process.cwd(), path)}\n`)
+}
+
+const [command = 'review', sub] = process.argv.slice(2)
 
 if (command === '-h' || command === '--help' || command === 'help') {
   process.stdout.write(HELP)
   process.exit(0)
 }
 
+// `shippie init` / `shippie configure` — scaffold the review workflow.
 if (command === 'init' || command === 'configure') {
   if (command === 'configure') {
     process.stderr.write(
@@ -68,15 +185,14 @@ if (command === 'init' || command === 'configure') {
     )
   }
   const force = process.argv.includes('--force')
-  const workflowDir = join(process.cwd(), '.github', 'workflows')
-  const workflowPath = join(workflowDir, 'shippie.yml')
+  const workflowPath = join(process.cwd(), '.github', 'workflows', 'shippie.yml')
   if (existsSync(workflowPath) && !force) {
     process.stderr.write(
       `shippie: ${relative(process.cwd(), workflowPath)} already exists. Re-run with --force to overwrite.\n`
     )
     process.exit(1)
   }
-  mkdirSync(workflowDir, { recursive: true })
+  mkdirSync(dirname(workflowPath), { recursive: true })
   writeFileSync(workflowPath, WORKFLOW_TEMPLATE)
   process.stdout.write(
     `Created ${relative(process.cwd(), workflowPath)}
@@ -92,10 +208,51 @@ Run reviews locally with: shippie review
   process.exit(0)
 }
 
-if (command !== 'review') {
+// `shippie qa init` — scaffold the QA workflow + a starter Playwright config.
+if (command === 'qa' && sub === 'init') {
+  const force = process.argv.includes('--force')
+  const workflowPath = join(process.cwd(), '.github', 'workflows', 'shippie-qa.yml')
+  if (existsSync(workflowPath) && !force) {
+    process.stderr.write(
+      `shippie: ${relative(process.cwd(), workflowPath)} already exists. Re-run with --force to overwrite.\n`
+    )
+    process.exit(1)
+  }
+  mkdirSync(dirname(workflowPath), { recursive: true })
+  writeFileSync(workflowPath, QA_WORKFLOW_TEMPLATE)
+  process.stdout.write(`Created ${relative(process.cwd(), workflowPath)}\n`)
+  writeIfAbsent(
+    join(process.cwd(), 'playwright.config.ts'),
+    QA_PLAYWRIGHT_CONFIG,
+    'playwright.config.ts'
+  )
+  writeIfAbsent(
+    join(process.cwd(), 'e2e', '.gitignore'),
+    '.artifacts/\nreport/\n',
+    'e2e/.gitignore'
+  )
+  process.stdout.write(
+    `
+Next steps:
+  1. Add a model provider key as a repo secret, e.g. ANTHROPIC_API_KEY.
+  2. Install the spec runner:  npm i -D @playwright/test
+  3. Allow Actions to open PRs: Settings → Actions → General →
+     "Allow GitHub Actions to create and approve pull requests".
+  4. Run on demand:  gh workflow run shippie-qa.yml -f target=https://your-app.example.com
+
+Run a QA pass locally with: shippie qa   (set SHIPPIE_QA_TARGET to a running app URL)
+`
+  )
+  process.exit(0)
+}
+
+if (command !== 'review' && command !== 'qa') {
   process.stderr.write(`shippie: unknown command "${command}"\n\n${HELP}`)
   process.exit(1)
 }
+
+// `shippie review` / `shippie qa` — boot the bundled server and POST the workflow.
+const workflow = command === 'qa' ? 'qa' : 'review'
 
 const serverPath = join(pkgRoot, 'dist', 'server.mjs')
 if (!existsSync(serverPath)) {
@@ -138,7 +295,7 @@ const shutdown = () => {
 
 try {
   await waitForServer()
-  const res = await fetch(`${base}/workflows/review?wait=result`, {
+  const res = await fetch(`${base}/workflows/${workflow}?wait=result`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: payload,
