@@ -87,6 +87,12 @@ a screencast by default — you do NOT launch Chrome inside the test.
 - Prefer selectors tied to user-facing semantics (roles, names, labels, stable attributes) over brittle
   CSS. Navigate with RELATIVE paths so the same test runs against any target via baseURL. Assert on
   user-visible VALUES. Wait on conditions (waitFor/waitForText), never sleep. One journey per test.
+- Visible text is often CSS-transformed (e.g. an uppercase nav renders "FEATURES" though the source says
+  "Features") — \`innerText\` returns the RENDERED casing, so match text case-INSENSITIVELY (\`/features/i\`)
+  or assert on stable attributes (\`a[href="#features"]\`), never the rendered casing.
+- Responsive layouts differ by viewport: a desktop nav may collapse to a hamburger at mobile width. Write
+  the test for the viewport it runs at (\`process.env.E2E_VIEWPORT\`), and verify it green with run_spec
+  before returning — a test that run_spec has not passed is not done.
 - The test source IS the review artifact: a reviewer should understand the journey and the guarantee
   from the test + its screenshots/video without running it.`
 

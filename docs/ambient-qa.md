@@ -1322,3 +1322,23 @@ shippie never becomes the target's OS/runtime.
   future hosted-VM product. No forced container overhead.
 - **Env-awareness:** \`buildQaInstructions\` injects \`process.platform\` so the agent knows its own shell
   (setsid on linux, nohup+disown on macOS) — about *shippie's* env, not the target's.
+
+### 2026-06-24 — Phase 1 fan-out: mechanism proven live
+
+Ran a multi-flow fan-out in the docker monolith against the real shippie.dev at \`mobile\` viewport
+(\`gpt-5.5\`). **The lead catalogued 3 flows and fanned out 3 parallel \`browser-driver\` subagents, each
+authoring its own \`e2e/tests/<slug>.cdp.mjs\`** (the \`top-nav\` one does viewport-rect checks + \`deepEqual\`
+on the nav structure). Verified the agent-authored tests by re-running them in the container (no model →
+proxy-immune): **2/3 green** (\`faq-accordion-expands\`, \`hero-section-loads\`, each with a \`session.mp4\` via
+ffmpeg). The browser-size knob works (mobile changed rendering).
+- **The 3rd test (\`top-nav\`) is RED** — \`waitForText(body, /Features/)\` fails at BOTH mobile and desktop
+  because the nav is CSS-uppercased ("FEATURES") and \`innerText\` returns rendered casing. A driver
+  test-authoring bug that **run_spec self-verify catches when the run completes** — but the run \`fetch
+  failed\` (proxy) before that driver finished its verify→fix loop, leaving it red. Fixed the *class* in the
+  rubric: match text case-INSENSITIVELY / assert on stable attributes; responsive layouts differ by viewport.
+- **Retry patch is LIVE + correct** (pi-agent-core → \`@earendil-works/pi-ai/base\` re-exports the patched
+  \`stream.js\`, loaded externally from node_modules by the externalized \`@flue/runtime\`), but a ~6s
+  3-retry window can't beat a multi-second outage on a long 4-agent run through a TLS-inspecting corporate
+  proxy. Follow-up: make the retry window env-tunable (\`PI_AI_RETRY_ATTEMPTS\`).
+- **Net:** the fan-out mechanism + viewport knob are proven; the long-run completion limit is the corporate
+  proxy (env), not shippie. On GitHub-hosted runners (no such proxy) long fan-out runs complete.
