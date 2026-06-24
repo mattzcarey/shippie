@@ -4,6 +4,7 @@ import { sendQaStarted } from '../common/telemetry'
 import { connectMcpServers } from '../mcp/connect'
 import { type QaPayload, resolveQaConfig } from '../qa/config'
 import { buildQaKickoff } from '../qa/instructions'
+import { readLastPr } from '../qa/pr'
 import { ensurePlaywrightConfig } from '../qa/scaffold'
 import { materializeSkill } from '../qa/skill'
 
@@ -55,7 +56,17 @@ export async function run({ init, payload, env }: FlueContext<QaPayload>) {
     const harness = await init(qaLead, { tools: mcp.tools })
     const session = await harness.session()
     const response = await session.prompt(buildQaKickoff(cfg))
-    return parseResult(response.text)
+
+    const agentResult = parseResult(response.text)
+    // The open_pull_request tool persists its result; prefer it over the model's
+    // self-report so the Action output seam (branch/changed/prUrl) is robust.
+    const pr = await readLastPr(cfg.workspace)
+    return {
+      ...agentResult,
+      branch: pr?.branch ?? agentResult.branch ?? null,
+      changed: pr?.changed ?? false,
+      prUrl: pr?.prUrl ?? agentResult.prUrl ?? null,
+    }
   } finally {
     await mcp.close()
   }

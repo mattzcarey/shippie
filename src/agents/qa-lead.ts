@@ -3,6 +3,7 @@ import { local } from '@flue/runtime/node'
 import { type QaPayload, resolveQaConfig } from '../qa/config'
 import { buildQaInstructions } from '../qa/instructions'
 import { createCatalogFlowsTool } from '../tools/catalog-flows'
+import { createOpenPrTool } from '../tools/open-pull-request'
 import { createRunSpecTool } from '../tools/run-spec'
 
 /**
@@ -26,7 +27,7 @@ export default createAgent<QaPayload>(async ({ payload, env }) => {
     }),
     cwd: cfg.workspace, // .agents/skills/chrome-cdp is materialized here at run start
     instructions: await buildQaInstructions(cfg),
-    tools: [createCatalogFlowsTool(cfg), createRunSpecTool(cfg)],
+    tools: [createCatalogFlowsTool(cfg), createRunSpecTool(cfg), createOpenPrTool(cfg)],
     compaction: { keepRecentTokens: 6000 }, // screenshots are heavy in context
     // Size BELOW the GitHub Actions job ceiling (hosted runners cap at 6h).
     durability: { timeoutMs: 75 * 60_000 },

@@ -81,9 +81,14 @@ Use that local URL as the base.`
 5. VERIFY. Run \`run_spec\` on the spec. If it fails, fix the SPEC (locators/assertions/waits) and re-run
    until it passes. Only a green spec is acceptable. Tear down the browser when done.
 
-6. FINISH. End your turn with ONLY a JSON object (no prose, no code fences) of the form:
+6. OPEN A PR. Once the spec is green, call \`open_pull_request\` with tier "missing-coverage", a clear
+   title, a markdown body (the flow covered, what it asserts, and the artifact paths from run_spec), and
+   \`paths\` set to the files you wrote (e2e/tests/<slug>.spec.ts and e2e/specs/<slug>.md). It commits onto
+   a week-stamped branch and opens or updates the PR. Skip this only if no committable green spec was produced.
+
+7. FINISH. End your turn with ONLY a JSON object (no prose, no code fences) of the form:
    {"flowsCatalogued": <n>, "drivenFlow": "<slug>", "specPath": "e2e/tests/<slug>.spec.ts",
     "passed": <true|false>, "broken": [{"flow": "<slug>", "reason": "<why>"}],
-    "summary": "<one or two sentences>"}
+    "prUrl": "<url or null>", "summary": "<one or two sentences>"}
    Report any flow you found broken in "broken" with a concrete reason — do not silently drop it.`
 }
