@@ -1,0 +1,65 @@
+name: QA CDP smoke
+
+# Throwaway feasibility probe for `shippie qa` (docs/ambient-qa.md §11, P0).
+# Confirms the LOCKED open investigation on REAL runners: can we launch headless
+# Chrome with --headless=new --remote-debugging-port, reach the CDP ws endpoint,
+# and drive one command — on ubuntu / windows / macos. No API key, no secrets,
+# no new deps, touches no src/. Delete once v0 is green.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Linux/macOS leg (bash). A bare `&` (no setsid/nohup) is fine HERE only
+      # because it's a single throwaway command, not the multi-call agent flow —
+      # the §3a launch hygiene (setsid/nohup/disown) is mandatory for the agent.
+      - name: Launch headless Chrome + drive one CDP command (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable \
+            || command -v chromium-browser || command -v chromium \
+            || echo "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")"
+          echo "Using Chrome: $CHROME"
+          "$CHROME" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage \
+            --remote-debugging-port=9222 about:blank &
+          for i in $(seq 1 50); do curl -sf http://127.0.0.1:9222/json/version >/dev/null && break; sleep 0.2; done
+          curl -s http://127.0.0.1:9222/json/version
+          WS="$(curl -s http://127.0.0.1:9222/json/version \
+            | node -e 'process.stdin.on("data",d=>console.log(JSON.parse(d).webSocketDebuggerUrl))')"
+          echo "ws=$WS"
+          # Node 22 ships a GLOBAL WebSocket unflagged — no `ws` dependency needed.
+          node -e '
+            const u = process.argv[1];
+            const ws = new WebSocket(u);
+            ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: "Browser.getVersion" }));
+            ws.onmessage = (m) => { console.log("CDP OK:", m.data); process.exit(0); };
+            ws.onerror = (e) => { console.error("ws error", e?.message || e?.type); process.exit(1); };
+            setTimeout(() => { console.error("timeout"); process.exit(1); }, 10000);
+          ' "$WS"
+
+      # Windows leg via cmd: launching Chrome through bash would mangle the
+      # "C:\Program Files" path quoting, so use cmd for the launch + drive.
+      - name: Launch headless Chrome + drive one CDP command (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --disable-gpu --remote-debugging-port=9222 about:blank
+          for /l %%i in (1,1,50) do (curl -sf http://127.0.0.1:9222/json/version >nul && goto ready) & ping -n 1 127.0.0.1 >nul
+          :ready
+          curl -s http://127.0.0.1:9222/json/version
+          for /f "delims=" %%w in ('curl -s http://127.0.0.1:9222/json/version ^| node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).webSocketDebuggerUrl))"') do set WS=%%w
+          node -e "const ws=new WebSocket(process.env.WS);ws.onopen=()=>ws.send(JSON.stringify({id:1,method:'Browser.getVersion'}));ws.onmessage=m=>{console.log('CDP OK:',m.data);process.exit(0)};ws.onerror=e=>{console.error('ws error');process.exit(1)};setTimeout(()=>{console.error('timeout');process.exit(1)},10000)"
