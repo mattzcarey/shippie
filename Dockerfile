@@ -20,9 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CHROME_BIN=/usr/bin/chromium
 
 WORKDIR /app
-COPY package*.json ./
-# Full install (incl. devDeps): @flue/cli runs the agent, @playwright/test runs specs.
-RUN npm ci
+COPY package.json ./
+# `npm install` (not `npm ci`): this repo's macOS-generated lockfile omits Linux-only
+# optional deps, which makes `npm ci` fail on Linux (same reason the CI workflows use
+# install, see docs/flue-migration.md). devDeps are included (no NODE_ENV=production):
+# @flue/cli runs the agent, @playwright/test runs specs. The `apps/*` workspaces glob
+# is empty here (apps/ is .dockerignore'd), so only root deps install.
+RUN npm install --no-audit --no-fund --include=dev
 # Playwright's own pinned Chromium for run_spec (deterministic, separate from CHROME_BIN).
 RUN npx playwright install chromium
 COPY . .
