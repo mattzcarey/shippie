@@ -113,7 +113,7 @@ const evalValue = async (cdp, expression) => {
  * Launch headless Chrome, attach over CDP, start a screencast, and return a driver.
  * Options (all optional): baseURL, chromeBin, port, ignoreCertErrors (default true —
  * QA tolerates self-signed / corporate-proxy certs), artifactsDir, video (filename
- * or false to disable), headless.
+ * or false to disable), viewport ({ width, height, deviceScaleFactor? }).
  */
 export async function open(opts = {}) {
   const baseURL = opts.baseURL ?? process.env.E2E_BASE_URL ?? ''
@@ -199,6 +199,16 @@ export async function open(opts = {}) {
   await cdp.send('Page.enable')
   await cdp.send('Runtime.enable')
   await cdp.send('DOM.enable')
+
+  // Optional viewport: open({ viewport: { width, height, deviceScaleFactor? } }).
+  if (opts.viewport?.width && opts.viewport?.height) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: opts.viewport.width,
+      height: opts.viewport.height,
+      deviceScaleFactor: opts.viewport.deviceScaleFactor ?? 1,
+      mobile: false,
+    })
+  }
 
   // Screencast → frames (acked so they keep flowing). Assembled on close().
   const framesDir = wantVideo ? mkdtempSync(join(tmpdir(), 'cdp-frames-')) : null
