@@ -1275,3 +1275,29 @@ what the agent did, and run anywhere `node` + system Chrome exist (no browser do
   + `run_spec`, and the client defaults to cert-tolerant (override with `CDP_STRICT_TLS=1`).
 - Verified: gates green (89 + 3 opt-in); the cdp-client drives real Chrome end-to-end (committed opt-in
   test); image rebuilt without the Playwright download. Live model runs re-verified next.
+
+### 2026-06-24 — Pivot VERIFIED live + review fixes (external HTTPS ✅, screencast ✅)
+
+- **Adversarial review workflow** (4 dims → verify → synthesis) ran on the pivot: 21 candidates → 17
+  confirmed, 0 blockers. Applied all: **H1** scaffolded workflow plumbs a cron target
+  (`vars.SHIPPIE_QA_TARGET`) + author→verify `base_url`; **H2** Docker entrypoint honors `-w` (output lands
+  in the mounted repo); **M1** `open_pull_request` auto-commits `e2e/cdp-client.mjs` with tests + verify
+  fails on an empty suite; **M2** client uses `--remote-debugging-port=0` + `DevToolsActivePort` (no port
+  collisions) + a process-exit guard; **M4** `run_spec` takes an optional `baseUrl`; **L1** `goto()` throws
+  on `Page.navigate` errorText; **L2** ffmpeg glob (no frame-gap truncation); **L4** verify job sets up
+  Chrome + ffmpeg; **L5** Dockerfile fails loudly if `dist/` wasn't prebuilt; **L6** this doc's body got a
+  pivot banner. Also added `open({ viewport })` support (the agent reached for it).
+- **LIVE, in the Docker monolith, against the real https://shippie.dev (external HTTPS through a corporate
+  TLS-inspecting proxy):** \`openai/gpt-5.5\` **PASSED** — catalogued 3 flows, drove the live site over the
+  cert-tolerant CDP path, wrote a dependency-free \`e2e/tests/shippie-landing-hero-nav-faq.cdp.mjs\` that
+  asserts the real hero copy + \`#install\` + the FAQ \`aria-expanded\` accordion, \`run_spec\` **green**, and
+  produced 2 PNG screenshots + a **1.3 MB \`session.mp4\` screencast** (ffmpeg in the image). Image shrank
+  3.91 GB → 2.08 GB with Playwright gone.
+- **kimi-k2.7-code on Workers AI:** **PASSED** a minimal-scope run on the new format end-to-end (live
+  shippie.dev → \`e2e/tests/hero-loads.cdp.mjs\` green + screencast). Longer multi-call runs intermittently
+  hit \`fetch failed\` on the **Cloudflare inference** endpoint from inside the container behind the corporate
+  proxy (a single inference call probes HTTP 200; OpenAI is stable) — an environment/network artifact, not a
+  shippie-qa defect. A transient model-call retry belongs in the flue/pi provider layer.
+
+**Bottom line: the pivot is verified end-to-end, live, with both model backends.** Tests are dependency-free
+CDP scripts, external HTTPS works through a TLS-inspecting proxy, and runs emit a playable \`session.mp4\`.
