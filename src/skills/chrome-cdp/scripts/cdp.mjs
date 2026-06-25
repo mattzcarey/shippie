@@ -15,7 +15,7 @@
 // Per-tab persistent daemon: page commands go through a daemon that holds
 // the CDP session open. Daemons auto-exit after 20min idle.
 
-import { readFileSync, writeFileSync, unlinkSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, unlinkSync, existsSync, readdirSync } from 'fs';
 import { spawn } from 'child_process';
 import net from 'net';
 
@@ -806,6 +806,37 @@ function extractGlobalFlags(argv) {
   return rest;
 }
 
+// ---------------------------------------------------------------------------
+// Session capture (record mode)
+// ---------------------------------------------------------------------------
+// When $CDP_RECORD=<path> is set, the CLIENT appends one JSON line per SUCCESSFUL
+// mutating/navigating command to <path> (JSONL). gen-test.mjs turns that log into a
+// faithful e2e/tests/<slug>.cdp.mjs. No-op when unset; NEVER throws (a record failure
+// must not break the live drive). The op name written is the cdp-client METHOD name
+// (nav->'nav'/goto, clickxy->'clickAt') so gen-test maps op->method directly.
+const RECORDABLE = new Set(['nav', 'navigate', 'fill', 'click', 'type', 'press', 'clickxy']);
+
+function recordOp(cmd, cmdArgs) {
+  const path = process.env.CDP_RECORD;
+  if (!path) return;
+  if (!RECORDABLE.has(cmd)) return;
+  let entry;
+  switch (cmd) {
+    case 'nav': case 'navigate': entry = { op: 'nav', url: cmdArgs[0] }; break;
+    case 'fill': entry = { op: 'fill', selector: cmdArgs[0], text: cmdArgs[1] ?? '' }; break;
+    case 'click': entry = { op: 'click', selector: cmdArgs[0] }; break;
+    case 'type': entry = { op: 'type', text: cmdArgs[0] ?? '' }; break;
+    case 'press': entry = { op: 'press', key: cmdArgs[0] }; break;
+    case 'clickxy': entry = { op: 'clickAt', x: Number(cmdArgs[0]), y: Number(cmdArgs[1]) }; break;
+    default: return;
+  }
+  try {
+    appendFileSync(path, JSON.stringify(entry) + '\n');
+  } catch {
+    // recording is best-effort — never break the live drive on a log-write failure
+  }
+}
+
 async function main() {
   const [cmd, ...args] = extractGlobalFlags(process.argv.slice(2));
 
@@ -909,6 +940,7 @@ async function main() {
   const response = await sendCommand(conn, { cmd, args: cmdArgs });
 
   if (response.ok) {
+    recordOp(cmd, cmdArgs);
     if (response.result) console.log(response.result);
   } else {
     console.error('Error:', response.error);

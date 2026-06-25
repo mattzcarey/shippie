@@ -59,6 +59,44 @@ Notes:
   then translate them to robust **CSS selectors** (e.g. `input[name=email]`, `button[type=submit]`,
   `[aria-label="Email"]`) for the committed CDP test — far more resilient than coordinates.
 
+## 2a. Record a flow → generate a test → add assertions → run (preferred authoring loop)
+
+Don't hand-write the replay from memory. Set `$CDP_RECORD` to a scratch JSONL path and drive
+the WHOLE flow once: `cdp.mjs` appends one JSON op per **successful** `nav`/`fill`/`click`/
+`type`/`clickxy` — so the log holds selectors that actually worked. Then `gen-test.mjs` turns
+that log into a faithful `e2e/tests/<slug>.cdp.mjs` (imports `../cdp-client.mjs`, replays your
+captured actions, leaves a `// TODO: add assertions` marker + safe placeholder asserts).
+
+`$CDP_RECORD` is read fresh on each `cdp.mjs` call, but **`export` does NOT survive between
+separate bash tool calls** (each is a fresh process group). Drive the whole flow in ONE bash
+call (recommended), or inline `CDP_RECORD=/tmp/$SLUG.jsonl` on every command.
+
+```bash
+SLUG=login
+export CDP_RECORD=/tmp/$SLUG.jsonl
+rm -f "$CDP_RECORD"                                   # don't append onto a stale log
+CDP="node .agents/skills/chrome-cdp/scripts/cdp.mjs --port $PORT"
+T=$($CDP list | head -1 | awk '{print $1}')
+$CDP nav  "$T" "$BASE_URL/login"
+$CDP fill "$T" "input[name=email]" "qa@example.com"  # use `snap` to pick resilient selectors
+$CDP fill "$T" "input[name=password]" "hunter2"
+$CDP click "$T" "button[type=submit]"
+# only SUCCESSFUL actions are logged — a failed selector leaves no line in the log
+
+# generate the test skeleton FROM the recording (not from memory):
+node .agents/skills/chrome-cdp/scripts/gen-test.mjs \
+  --from "$CDP_RECORD" --out e2e/tests/$SLUG.cdp.mjs --name "$SLUG" --base "$BASE_URL"
+```
+
+Then OPEN `e2e/tests/$SLUG.cdp.mjs`, replace the `// TODO: add assertions` block with the
+flow's real user-visible guarantee (`waitForText` / `assert.match` on `b.text(...)`, etc.) —
+keep the replayed actions (verified selectors). VERIFY with `run_spec`; fix the test (asserts/
+waits, or re-record a bad selector) until it exits 0. Teardown: `unset CDP_RECORD` (or delete
+`/tmp/$SLUG.jsonl`) and stop Chrome at flow end.
+
+Concurrent drivers on different ports MUST use different `$CDP_RECORD` paths (e.g.
+`/tmp/$SLUG.jsonl`, unique per flow) or their logs interleave.
+
 ## 3. Remote browser override seam (do NOT use in v0)
 
 ```bash

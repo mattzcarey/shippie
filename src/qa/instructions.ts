@@ -56,6 +56,10 @@ const SHARED_RUBRIC = `// The \`chrome-cdp\` skill (activate it) to EXPLORE and 
 - Built-in \`read\`/\`grep\`/\`glob\`/\`bash\`/\`edit\`/\`write\` to explore the repo and operate the app.
 - \`run_spec\` to run a generated CDP test (\`node <test>\`) and get pass/fail + artifact paths. Only a
   test that PASSES (exit 0) is worth keeping.
+- PREFERRED authoring: drive once with \`CDP_RECORD=e2e/.sessions/<slug>.jsonl\` set (every successful
+  cdp.mjs action is logged), then \`node .agents/skills/chrome-cdp/scripts/gen-test.mjs --from
+  e2e/.sessions/<slug>.jsonl --out e2e/tests/<slug>.cdp.mjs --name <slug>\` scaffolds the test from the REAL
+  recorded actions (selectors that worked) — then add real assertions and verify with run_spec.
 
 // Committed tests use ../cdp-client.mjs (NOT Playwright)
 A test is a node script at \`e2e/tests/<slug>.cdp.mjs\` that imports the committed client and asserts:
@@ -236,13 +240,27 @@ ${environmentNote()}
 Your job, for that ONE flow only:
 1. Activate the \`chrome-cdp\` skill and launch your OWN headless Chrome over CDP (the cdp-client launches
    Chrome on an ephemeral port per \`open()\`, so concurrent drivers do not collide on the debug port).
-2. Drive the flow interactively to learn the real, resilient selectors (use \`snap\`).
-3. Write a black-box test to \`e2e/tests/<slug>.cdp.mjs\` that \`import { open } from '../cdp-client.mjs'\`
-   and asserts the flow's user-visible guarantee. The client \`e2e/cdp-client.mjs\` already exists — do NOT
-   recreate it. Take at least one \`shot\` for the artifact bundle.
-4. Verify with \`run_spec\`. If it fails, fix the TEST (selectors/assertions/waits) and re-run until it
-   passes (exit 0). Only a green test is acceptable. If the flow is genuinely broken in the app (not a
-   test bug), stop and report it as broken with a concrete reason.
+2. RECORD the flow as you drive it (PREFERRED — do not hand-write the replay from memory). Set
+   \`CDP_RECORD\` to a scratch JSONL path BEFORE driving, then drive the WHOLE flow once with the cdp.mjs CLI
+   (nav/snap/fill/click/type/clickxy). Every SUCCESSFUL action is appended to the log automatically, so the
+   log holds only selectors that actually worked. Use \`snap\` to choose resilient selectors as you go.
+   \`export\` does NOT survive across separate bash tool calls, so drive the whole flow in ONE bash call:
+     export CDP_RECORD=e2e/.sessions/<slug>.jsonl
+     rm -f "$CDP_RECORD"; mkdir -p e2e/.sessions
+     # ... your cdp.mjs nav/fill/click/type/clickxy commands for the flow ...
+3. GENERATE the test skeleton from the recording (do NOT transcribe the actions by hand):
+     node .agents/skills/chrome-cdp/scripts/gen-test.mjs --from e2e/.sessions/<slug>.jsonl \\
+       --out e2e/tests/<slug>.cdp.mjs --name <slug>
+   This writes \`e2e/tests/<slug>.cdp.mjs\` that \`import { open } from '../cdp-client.mjs'\` and REPLAYS your
+   captured actions (goto/fill/click/...) with safe placeholder assertions + a TODO marker. The client
+   \`e2e/cdp-client.mjs\` already exists — do NOT recreate it.
+4. ADD REAL ASSERTIONS. Open the generated file and replace the \`// TODO: add assertions\` block with the
+   flow's actual user-visible guarantee (\`waitForText\` / \`assert.match\` on \`b.text(...)\`, etc.). Match text
+   case-INSENSITIVELY (\`/welcome/i\`) since \`innerText\` returns the RENDERED casing. KEEP the replayed
+   actions — they are the verified selectors. Take at least one \`shot\` for the artifact bundle.
+5. Verify with \`run_spec\`. If it fails, fix the TEST (assertions/waits, or re-record if a selector was
+   wrong) and re-run until it passes (exit 0). Only a green test is acceptable. If the flow is genuinely
+   broken in the app (not a test bug), stop and report it as broken with a concrete reason.
 
 Do NOT catalog flows and do NOT open pull requests — those are the lead's job. Return ONLY your verdict.
 

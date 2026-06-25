@@ -1373,3 +1373,23 @@ with gates **+ `node dist/server.mjs` boot-check**) then independently re-verifi
 Remaining roadmap (need external infra / a design pass): remote \`BrowserProvider\` (remote ws / browserless)
 + remote \`ComputeProvider\` (VM/E2B/Daytona) — the seams exist; and session capture (record a real dev
 session → test).
+
+---
+
+## Change log
+
+### 2026-06-25 — remote = Cloudflare Sandbox SDK (future); local-only now
+
+Narrowed the provider-seam roadmap to a single planned remote backend. The earlier generic remote
+naming (browserless / E2B / Daytona) is dropped: there is exactly one planned remote backend, the
+**Cloudflare Sandbox SDK** (\`@cloudflare/sandbox\`) — a sandboxed container exposing a terminal, ports,
+and a preview URL. Both seams (\`BrowserProvider\` in \`src/qa/providers/browser.ts\`, \`ComputeProvider\` in
+\`src/qa/providers/compute.ts\`) keep \`'local'\` as the only IMPLEMENTED backend (headless Chrome + bash on
+the GitHub Action runner). The future backend is now named \`'cloudflare-sandbox'\`: \`browserProviderKind()\`
+and \`computeProviderKind()\` return the named unions \`BrowserProviderKind\` / \`ComputeProviderKind\`
+(\`'local' | 'cloudflare-sandbox'\`) and THROW a "not implemented yet" error when
+\`BROWSER_PROVIDER=cloudflare-sandbox\` / \`COMPUTE_PROVIDER=cloudflare-sandbox\` is requested, rather than
+silently falling back to local. No \`@cloudflare/sandbox\` import was added (the package is not installed;
+it is referenced only in comments/TODOs), so compilation and boot are unaffected. The legacy
+browserless/E2B/Daytona strings above remain only as historical roadmap text; the live seams name the
+Cloudflare Sandbox SDK.
