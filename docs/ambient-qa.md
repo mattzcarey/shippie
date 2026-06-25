@@ -932,6 +932,8 @@ there. **Optional central-upgrade implementation:** make the scaffolded `shippie
 `uses: mattzcarey/shippie/.github/workflows/qa-reusable.yml@v0` caller (a `workflow_call` reusable
 workflow), so the pipeline version-bumps centrally while still composing with the fan-out.
 
+> **Setup guide:** see [docs/cross-repo-qa.md](./cross-repo-qa.md) for the step-by-step GitHub App + `shippie qa fanout-init` runbook, the reusable-workflow caller, and the escape hatch.
+
 ## 10. Packaging — Dockerised monolith + the two override seams
 
 **One image, identical local and CI (LOCKED).** `node:22-bookworm-slim` + Chromium + flue + the agent +

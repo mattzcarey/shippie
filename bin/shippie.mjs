@@ -32,6 +32,9 @@ Usage:
   shippie init       Scaffold a GitHub Actions workflow that reviews every pull request
   shippie qa init    Scaffold a weekly + on-demand QA workflow (+ e2e/.gitignore)
                      (--cross-os: verify the committed tests on ubuntu + windows + macos)
+  shippie qa fanout-init [owner/repoA,owner/repoB ...]
+                     Scaffold a control-repo workflow that fans QA out across many repos
+                     you own (dispatches each target's own shippie-qa.yml via a GitHub App)
   shippie configure  Deprecated alias for "init" (removed in the next major version)
 
 Set a model + provider key first, e.g.:
@@ -188,6 +191,91 @@ jobs:
 
 ${buildVerifyJob(crossOs)}`
 
+// Cross-repo fan-out. Scaffolded into a *control* repo: on a schedule + on demand
+// it dispatches each TARGET repo's own .github/workflows/shippie-qa.yml. It never
+// pushes or opens PRs in the targets — each target runs under its OWN GITHUB_TOKEN.
+// The cross-repo credential is a GitHub App installation token (actions/create-
+// github-app-token@v1) scoped per-shard to a single repo with actions:write only,
+// because dispatching a workflow is all the "create a workflow dispatch event" REST
+// call needs. GITHUB_TOKEN is repo-scoped and CANNOT dispatch other repos.
+const buildFanoutWorkflow = (repos) => {
+  const matrix = (repos.length > 0 ? repos : []).map((r) => `          - ${r}`).join('\n')
+  const matrixBlock =
+    repos.length > 0
+      ? matrix
+      : `          # >>> Fill in the target repos (owner/repo), one per line. <<<
+          # Re-run: shippie qa fanout-init owner/repoA,owner/repoB
+          # - my-org/app-one
+          # - my-org/app-two`
+
+  return `name: Shippie QA — fan-out 🚢🧪
+
+# Runs Shippie QA across many repos you own from this single control repo.
+# Each target repo runs its OWN .github/workflows/shippie-qa.yml under its own
+# GITHUB_TOKEN — this workflow only DISPATCHES them (actions:write), it never
+# pushes or opens PRs in the targets.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Optional URL/path passed through to each repo's QA run (sets E2E_BASE_URL)"
+        required: false
+      scope:
+        description: "Optional flows/areas to prioritize, passed through to each repo"
+        required: false
+
+# This workflow itself needs NO write scope on the control repo: the cross-repo
+# credential is the App token minted below, not GITHUB_TOKEN.
+permissions:
+  contents: read
+
+concurrency:
+  group: shippie-qa-fanout
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't let one un-installed / mis-scaffolded repo abort the rest.
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        repo:
+${matrixBlock}
+    steps:
+      - name: Mint an App installation token scoped to this target (actions:write only)
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: \${{ vars.QA_APP_ID }}
+          private-key: \${{ secrets.QA_APP_PRIVATE_KEY }}
+          # owner is required when "repositories" names a repo outside this control repo.
+          owner: \${{ github.repository_owner }}
+          repositories: \${{ matrix.repo }}
+          # Least privilege: dispatching a workflow only needs actions:write.
+          # The TARGET's own run uses ITS OWN GITHUB_TOKEN to push specs + open the PR,
+          # so this token needs NO contents / pull-requests on the target.
+          permission-actions: write
+
+      - name: Dispatch shippie-qa.yml in \${{ matrix.repo }}
+        env:
+          GH_TOKEN: \${{ steps.app-token.outputs.token }}
+        run: |
+          extra=()
+          [ -n "\${{ inputs.target }}" ] && extra+=(-f "target=\${{ inputs.target }}")
+          [ -n "\${{ inputs.scope }}" ]  && extra+=(-f "scope=\${{ inputs.scope }}")
+          gh workflow run shippie-qa.yml \\
+            --repo "\${{ matrix.repo }}" \\
+            --ref  "$(gh repo view "\${{ matrix.repo }}" --json defaultBranchRef -q .defaultBranchRef.name)" \\
+            "\${extra[@]}"
+          echo "Dispatched shippie-qa.yml in \${{ matrix.repo }}"
+`
+}
+
 const writeIfAbsent = (path, content, label) => {
   if (existsSync(path)) {
     process.stdout.write(
@@ -273,6 +361,80 @@ Next steps:
 Shippie QA writes dependency-free CDP tests (e2e/tests/*.cdp.mjs + e2e/cdp-client.mjs) that run with
 just node + Chrome — no Playwright. Run a pass locally with: shippie qa  (set SHIPPIE_QA_TARGET).
 Pass --cross-os to verify the committed tests on ubuntu + windows + macos.
+`
+  )
+  process.exit(0)
+}
+
+// `shippie qa fanout-init [owner/repoA,owner/repoB ...]` — scaffold the cross-repo
+// fan-out workflow into the CURRENT (control) repo. Accepts the target list as
+// comma-separated and/or space-separated args; flags are ignored.
+if (command === 'qa' && sub === 'fanout-init') {
+  const force = process.argv.includes('--force')
+  // Everything after "qa fanout-init" that isn't a flag is a repo (comma- or
+  // space-separated). e.g. "owner/a,owner/b owner/c" → [owner/a, owner/b, owner/c].
+  const repos = process.argv
+    .slice(4)
+    .filter((a) => !a.startsWith('-'))
+    .flatMap((a) => a.split(','))
+    .map((r) => r.trim())
+    .filter(Boolean)
+
+  const workflowPath = join(
+    process.cwd(),
+    '.github',
+    'workflows',
+    'shippie-qa-fanout.yml'
+  )
+  if (existsSync(workflowPath) && !force) {
+    process.stderr.write(
+      `shippie: ${relative(process.cwd(), workflowPath)} already exists. Re-run with --force to overwrite.\n`
+    )
+    process.exit(1)
+  }
+  mkdirSync(dirname(workflowPath), { recursive: true })
+  writeFileSync(workflowPath, buildFanoutWorkflow(repos))
+  process.stdout.write(
+    `Created ${relative(process.cwd(), workflowPath)}` +
+      (repos.length > 0
+        ? `  (${repos.length} target repo${repos.length === 1 ? '' : 's'})\n`
+        : `  (no target repos yet — edit the matrix to add them)\n`)
+  )
+
+  if (repos.length === 0) {
+    process.stdout.write(
+      '  • no repos given — wrote a commented placeholder matrix; fill in the\n' +
+        '    target repos (owner/repo) in the file, or re-run:\n' +
+        '      shippie qa fanout-init owner/repoA,owner/repoB\n'
+    )
+  }
+
+  process.stdout.write(
+    `
+This control workflow DISPATCHES each target repo's own shippie-qa.yml. It does
+NOT push or open PRs in the targets — each target runs under its OWN GITHUB_TOKEN.
+
+Set up the GitHub App (one-time):
+  1. Create a GitHub App (Settings → Developer settings → GitHub Apps → New).
+     Permissions → Repository → Actions: Read and write.  (nothing else is needed)
+  2. Generate a private key; install the App on EVERY target repo above.
+  3. In THIS control repo: add the App ID as a repo *variable* QA_APP_ID
+     (Settings → Secrets and variables → Actions → Variables), and the private
+     key as a repo *secret* QA_APP_PRIVATE_KEY.
+
+In EACH target repo (one-time):
+  4. Ensure it has .github/workflows/shippie-qa.yml  (run \`shippie qa init\` there,
+     commit, push to its default branch — the dispatch targets the default branch).
+  5. Add its model provider key as a repo secret, e.g. ANTHROPIC_API_KEY.
+  6. Settings → Actions → General → "Allow GitHub Actions to create and approve
+     pull requests"  (without this the target's own QA run can't open its PR).
+
+Then:
+  • Scheduled:  runs every Monday 06:00 UTC.
+  • On demand:  gh workflow run shippie-qa-fanout.yml
+                gh workflow run shippie-qa-fanout.yml -f scope="checkout + login"
+
+Edit the matrix in ${relative(process.cwd(), workflowPath)} to add/remove repos.
 `
   )
   process.exit(0)
