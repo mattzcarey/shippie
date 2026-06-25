@@ -24,6 +24,12 @@ inputs:
   VIEWPORT:
     description: "Browser size for web targets: 1280x900 | 375x812@2 | mobile | tablet | desktop"
     required: false
+  RETRY_ATTEMPTS:
+    description: "pi-ai transient-retry attempts after the first try (PI_AI_RETRY_ATTEMPTS, default 4)"
+    required: false
+  RETRY_BASE_MS:
+    description: "pi-ai retry exponential backoff base ms (PI_AI_RETRY_BASE_MS, default 500); delay_i = base*3^i"
+    required: false
   TELEMETRY:
     description: "Send anonymous usage telemetry. Set to 'false' to opt out."
     required: false
@@ -100,6 +106,8 @@ runs:
         SHIPPIE_TELEMETRY: ${{ inputs.TELEMETRY }}
         CHROME_BIN: ${{ inputs.CHROME_BIN }}
         SHIPPIE_QA_VIEWPORT: ${{ inputs.VIEWPORT }}
+        PI_AI_RETRY_ATTEMPTS: ${{ inputs.RETRY_ATTEMPTS }}
+        PI_AI_RETRY_BASE_MS: ${{ inputs.RETRY_BASE_MS }}
       run: |
         ROOT="$(dirname "$GITHUB_ACTION_PATH")"
         npx flue run qa \

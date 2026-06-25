@@ -110,9 +110,13 @@ ${environmentNote()}
   catalog. Use \`snap\` (accessibility tree) to learn resilient selectors before you delegate.
 - Built-in \`read\`/\`grep\`/\`glob\`/\`bash\`/\`edit\`/\`write\` to explore the repo and operate the app.
 - \`catalog_flows\` to persist the discovered user flows (the backlog + a review artifact). LEAD-ONLY.
-- \`task\` to delegate ONE flow to a \`browser-driver\` subagent (it owns its own Chrome + writes + verifies
-  the test). Emit several \`task\` calls in a SINGLE turn to run drivers in parallel.
-- \`open_pull_request\` to commit the green specs as one missing-coverage PR. LEAD-ONLY.
+- \`task\` to delegate work to a subagent: \`agent: "browser-driver"\` for ONE flow (it owns its own Chrome
+  + writes + verifies the test), or \`agent: "healer"\` for ONE broken flow (it attempts a minimal source
+  fix + a failing→passing regression test). Emit several \`task\` calls in a SINGLE turn to run in parallel.
+- \`classify_finding\` — the mechanical PR bar. Call it for EVERY finding before opening a PR; only open a
+  PR for an accepted finding (broken-flow always opens; missing-coverage is a low bar; refactor-hint has a
+  VERY HIGH bar). LEAD-ONLY.
+- \`open_pull_request\` to commit the right-tier PR(s). LEAD-ONLY.
 - \`run_spec\` (also available) to sanity re-run a returned spec yourself if a verdict looks suspect.
 
 ${SHARED_RUBRIC}`
@@ -156,10 +160,62 @@ ${SHARED_RUBRIC}`
 }
 
 /**
+ * The healer subagent's persistent instructions. Subagents do NOT inherit the
+ * lead's instructions, so this carries the full black-box rubric. The healer is
+ * given ONE broken flow + its spec + the driver's fixHint, attempts a MINIMAL
+ * source fix, writes/repairs the regression test so it goes failing→passing, and
+ * verifies it green. If it cannot fix the app it leaves the source untouched,
+ * captures the broken behavior in a repro spec, and returns a precise diagnosis.
+ * It does NOT catalog flows, classify findings, or open PRs.
+ */
+export const buildHealerInstructions = (cfg: QaConfig): string => {
+  void cfg // reserved for future per-healer config; keeps the signature stable
+  return `You are a Shippie QA healer subagent. You are handed exactly ONE broken catalogued flow, its spec,
+and the driver's fixHint describing what went wrong.
+
+${environmentNote()}
+
+Your job, for that ONE flow only:
+1. REPRODUCE the break. Read the failing spec (e2e/tests/<slug>.cdp.mjs if the driver wrote one) and/or
+   activate the \`chrome-cdp\` skill to drive the flow and SEE the failure with your own eyes. Confirm the
+   break is real (a genuine app defect) before changing anything.
+2. ROOT-CAUSE it in the repo. Use \`read\`/\`grep\`/\`glob\` to trace the defect to its source. You are
+   white-box to FIX the app, but stay black-box to TEST it (never import app internals into a test).
+3. FIX IT MINIMALLY. Use \`edit\`/\`write\` to make the smallest correct change that repairs the user-visible
+   behavior. Do not refactor, reformat, or touch unrelated code — a tight diff is reviewable; a sprawling
+   one is not. Track every repo-relative file you edit for \`changedPaths\`.
+4. WRITE THE REGRESSION TEST. Author or repair \`e2e/tests/<slug>.cdp.mjs\` (importing ../cdp-client.mjs) so
+   it asserts the now-CORRECT user-visible value — a normal assertion that PASSES only after your fix and
+   would have FAILED on the old code. Take at least one \`shot\` for the artifact bundle.
+5. VERIFY GREEN with \`run_spec\`. Only a green regression test proves the fix. If it fails, fix the cause
+   (the app or the test selectors/waits) and re-run until exit 0.
+6. IF YOU GENUINELY CANNOT FIX IT: leave the app source UNCHANGED (revert any speculative edits), write a
+   repro spec whose assertions CAPTURE the broken state (so a reviewer sees the journey and the wrong
+   value), put the "should be X" expectation in a comment, and produce a precise root-cause diagnosis for
+   a human. \`changedPaths\` is then empty and \`fixed\` is false.
+
+Do NOT catalog flows, do NOT classify findings, and do NOT open pull requests — those are the lead's job.
+Return ONLY your heal verdict.
+
+// Required return contract (end your turn with ONLY this JSON object — no prose, no code fences):
+{"flow": "<slug>", "fixed": true | false, "specPath": "e2e/tests/<slug>.cdp.mjs",
+ "changedPaths": ["<repo-relative app file the fix touched>", "..."],
+ "severity": "blocker" | "high" | "medium" | "low",
+ "diagnosis": "<root cause + what the fix changes; or why it could not be fixed>"}
+- fixed=true  → specPath was failing on the old code and is now green; changedPaths lists the app files you
+  edited (the lead commits them alongside the test).
+- fixed=false → app source untouched (changedPaths empty); specPath is the repro and diagnosis carries the
+  root-cause analysis + the "needs human" detail.
+
+${SHARED_RUBRIC}`
+}
+
+/**
  * The kickoff prompt that drives a run end-to-end as the LEAD: explore → catalog →
  * FAN OUT one browser-driver per flow (in parallel, <=3 per turn) → collect verdicts
- * → open one missing-coverage PR with all green specs. Backward-compatible with N=1:
- * a single catalogued flow is just one driver task.
+ * → HEAL each broken flow with a healer subagent → CLASSIFY every finding → open the
+ * right-tier PR(s). Backward-compatible with N=1: a single catalogued flow is just one
+ * driver task (plus one heal task if it comes back broken).
  */
 export const buildQaKickoff = (cfg: QaConfig): string => {
   const baseUrl = cfg.target
@@ -197,18 +253,52 @@ poll its port until ready, and use that local URL as the base.`
     "summary": "..."}. Read every verdict. If a verdict looks suspect you MAY re-run its spec with
    \`run_spec\` yourself to confirm. A flow counts as covered only if its driver returned status "pass".
 
-5. OPEN A PR. Once you have at least one passing flow, call \`open_pull_request\` with tier
-   "missing-coverage", a clear title, a markdown body (each covered flow, what it asserts, and any flows
-   reported broken/flaky with reasons), and \`paths\` = ALL green test files (e2e/tests/<slug>.cdp.mjs for
-   every passing flow), their spec docs (e2e/specs/<slug>.md), AND the driver (e2e/cdp-client.mjs) so the
-   suite runs standalone. Skip only if NO flow passed.
+5. HEAL — one healer per BROKEN flow. For EACH flow whose verdict is "broken" (and, at your judgment, a
+   reproducibly "flaky" one), emit a \`task\` call with \`agent: "healer"\` whose \`prompt\` gives the healer
+   everything it needs to work alone:
+   - the flow SLUG,
+   - the full spec for that flow (paste the contents of its e2e/specs/<slug>.md),
+   - the driver's \`summary\` / fixHint describing what went wrong,
+   - the base URL to test against.
+   Do NOT pass a \`cwd\` to \`task\` — the healer shares this workspace (chrome-cdp skill + cdp-client). Same
+   parallelism THROTTLE as the drivers: emit MULTIPLE healer \`task\` calls in a SINGLE turn but cap it at
+   <=3 per turn. Each healer attempts a minimal source fix, writes a failing→passing regression test
+   verified green with run_spec, and returns a heal verdict:
+   {"flow": "<slug>", "fixed": true|false, "specPath": "e2e/tests/<slug>.cdp.mjs",
+    "changedPaths": ["<app file>", ...], "severity": "blocker"|"high"|"medium"|"low", "diagnosis": "..."}.
+   (If no flow came back broken, skip this step.)
 
-6. FINISH. End your turn with ONLY a JSON object (no prose, no code fences):
+6. CLASSIFY — call \`classify_finding\` for EVERY finding to get its accepted tier. Findings are:
+   - each green flow → tier "missing-coverage" (the new spec is the finding),
+   - each broken flow you healed or attempted → tier "broken-flow" (use the healer's \`severity\`),
+   - any refactor opportunity you want to raise → tier "refactor-hint" (off by default: only raise one with
+     \`pressingNeed: true\` AND severity blocker/high, knowing the tool will REJECT it otherwise).
+   Only proceed to a PR for a finding where \`classify_finding\` returned \`accepted: true\`.
+
+7. OPEN PRs — one per accepted tier:
+   - missing-coverage PR (skip if no flow passed): call \`open_pull_request\` with tier "missing-coverage",
+     a clear title, a body (each covered flow + what it asserts, plus any flow reported broken/flaky), and
+     \`paths\` = ALL green test files (e2e/tests/<slug>.cdp.mjs for every passing flow) + their spec docs
+     (e2e/specs/<slug>.md). The driver (e2e/cdp-client.mjs) is auto-included so the suite runs standalone.
+   - broken-flow PR — ONE per healed/attempted broken flow whose finding was accepted: call
+     \`open_pull_request\` with tier "broken-flow", \`flowSlug: "<slug>"\` (this dedups the PR per flow), a
+     title that EMBEDS the slug (e.g. "[shippie-qa] fix broken flow: <slug>"), a body with the diagnosis,
+     what the fix changes, the before→after, and — for fixed:false — a clear "needs human" callout, and
+     \`paths\` = the regression test (e2e/tests/<slug>.cdp.mjs) + the healer's \`changedPaths\` (the app fix
+     files) + the flow's spec doc (e2e/specs/<slug>.md).
+   - refactor-hint PR — ONLY if \`classify_finding\` accepted it (very high bar). Same call with tier
+     "refactor-hint".
+
+8. FINISH. End your turn with ONLY a JSON object (no prose, no code fences):
    {"flowsCatalogued": <n>,
     "results": [{"flow": "<slug>", "status": "pass"|"broken"|"flaky", "specPath": "e2e/tests/<slug>.cdp.mjs",
                  "summary": "<why>"}],
     "passed": <true if any flow passed>,
     "broken": [{"flow": "<slug>", "reason": "<why>"}],
-    "prUrl": "<url or null>", "summary": "<one or two sentences>"}
-   Report any flow found broken/flaky in "broken" with a concrete reason — do not silently drop it.`
+    "healed": [{"flow": "<slug>", "fixed": true|false, "severity": "<sev>", "diagnosis": "<why>"}],
+    "prUrl": "<the missing-coverage PR url, or null>",
+    "prUrls": ["<every PR url opened this run>"],
+    "summary": "<one or two sentences>"}
+   Report any flow found broken/flaky in "broken" with a concrete reason — do not silently drop it. Keep
+   "prUrl" as the missing-coverage PR for back-compat; "prUrls" carries all of them.`
 }

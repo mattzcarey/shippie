@@ -31,6 +31,7 @@ Usage:
   shippie qa         Autonomous QA: explore, drive flows in headless Chrome, write+verify e2e tests
   shippie init       Scaffold a GitHub Actions workflow that reviews every pull request
   shippie qa init    Scaffold a weekly + on-demand QA workflow (+ e2e/.gitignore)
+                     (--cross-os: verify the committed tests on ubuntu + windows + macos)
   shippie configure  Deprecated alias for "init" (removed in the next major version)
 
 Set a model + provider key first, e.g.:
@@ -60,11 +61,82 @@ jobs:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `
 
-const QA_WORKFLOW_TEMPLATE = `name: Shippie QA 🧪
+// The "verify" job re-runs the committed CDP tests with plain node + system Chrome.
+// Default = ubuntu-only. With --cross-os it fans out to a 3-OS matrix (ubuntu +
+// windows + macos), installing Chrome + ffmpeg per-OS and uploading per-OS artifacts.
+const buildVerifyJob = (crossOs) => {
+  const runsOn = crossOs
+    ? `    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: \${{ matrix.os }}`
+    : `    runs-on: ubuntu-latest`
 
-# Weekly + on-demand autonomous QA. The "author" job runs the agent (Linux, holds
-# the model key) and opens a PR; the "verify" job re-runs the committed CDP tests
-# with plain node + system Chrome (no agent, no key) so the PR's checks prove them green.
+  const ffmpeg = crossOs
+    ? `      # ffmpeg (screencast → mp4): per-OS package manager.
+      - name: Install ffmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+      - name: Install ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress`
+    : `      - name: Install ffmpeg (screencast → mp4)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg`
+
+  // On windows-latest the default shell is PowerShell; the array/nullglob/shopt
+  // script is bash-only, so pin shell: bash (Git Bash ships on the windows runner).
+  const testShell = crossOs ? `        shell: bash\n` : ``
+  const artifactName = crossOs ? `e2e-artifacts-\${{ matrix.os }}` : `e2e-artifacts`
+
+  return `  verify:
+    needs: author
+    if: needs.author.outputs.changed == 'true'
+${runsOn}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ needs.author.outputs.branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+${ffmpeg}
+      - name: Run committed CDP e2e tests (node + Chrome; no deps)
+${testShell}        env:
+          E2E_BASE_URL: \${{ needs.author.outputs.base_url }}
+          CHROME_BIN: \${{ steps.chrome.outputs.chrome-path }}
+          CDP_IGNORE_CERT_ERRORS: "1"
+        run: |
+          shopt -s nullglob
+          tests=(e2e/tests/*.cdp.mjs)
+          if [ \${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.cdp.mjs found"; exit 1; fi
+          fail=0
+          for f in "\${tests[@]}"; do
+            echo "== $f =="
+            node "$f" || fail=1
+          done
+          exit $fail
+      - if: \${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${artifactName}
+          path: e2e/.artifacts/
+          retention-days: 30
+`
+}
+
+// Weekly + on-demand autonomous QA. The "author" job runs the agent (Linux, holds
+// the model key) and opens a PR; the "verify" job re-runs the committed CDP tests
+// (no agent, no key) so the PR's checks prove them green.
+const buildQaWorkflow = ({ crossOs } = {}) => `name: Shippie QA 🧪
 
 on:
   schedule:
@@ -114,46 +186,7 @@ jobs:
           ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 
-  verify:
-    needs: author
-    if: needs.author.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: \${{ needs.author.outputs.branch }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - uses: browser-actions/setup-chrome@v1
-        id: chrome
-      - name: Install ffmpeg (screencast → mp4)
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Run committed CDP e2e tests (node + Chrome; no deps)
-        env:
-          E2E_BASE_URL: \${{ needs.author.outputs.base_url }}
-          CHROME_BIN: \${{ steps.chrome.outputs.chrome-path }}
-          CDP_IGNORE_CERT_ERRORS: "1"
-        run: |
-          shopt -s nullglob
-          tests=(e2e/tests/*.cdp.mjs)
-          if [ \${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.cdp.mjs found"; exit 1; fi
-          fail=0
-          for f in "\${tests[@]}"; do
-            echo "== $f =="
-            node "$f" || fail=1
-          done
-          exit $fail
-      - if: \${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-artifacts
-          path: e2e/.artifacts/
-          retention-days: 30
-`
+${buildVerifyJob(crossOs)}`
 
 const writeIfAbsent = (path, content, label) => {
   if (existsSync(path)) {
@@ -208,6 +241,7 @@ Run reviews locally with: shippie review
 // `shippie qa init` — scaffold the QA workflow + e2e/.gitignore.
 if (command === 'qa' && sub === 'init') {
   const force = process.argv.includes('--force')
+  const crossOs = process.argv.includes('--cross-os')
   const workflowPath = join(process.cwd(), '.github', 'workflows', 'shippie-qa.yml')
   if (existsSync(workflowPath) && !force) {
     process.stderr.write(
@@ -216,8 +250,13 @@ if (command === 'qa' && sub === 'init') {
     process.exit(1)
   }
   mkdirSync(dirname(workflowPath), { recursive: true })
-  writeFileSync(workflowPath, QA_WORKFLOW_TEMPLATE)
+  writeFileSync(workflowPath, buildQaWorkflow({ crossOs }))
   process.stdout.write(`Created ${relative(process.cwd(), workflowPath)}\n`)
+  if (crossOs) {
+    process.stdout.write(
+      '  • verify job runs on a 3-OS matrix (ubuntu + windows + macos)\n'
+    )
+  }
   writeIfAbsent(
     join(process.cwd(), 'e2e', '.gitignore'),
     '.artifacts/\n',
@@ -233,6 +272,7 @@ Next steps:
 
 Shippie QA writes dependency-free CDP tests (e2e/tests/*.cdp.mjs + e2e/cdp-client.mjs) that run with
 just node + Chrome — no Playwright. Run a pass locally with: shippie qa  (set SHIPPIE_QA_TARGET).
+Pass --cross-os to verify the committed tests on ubuntu + windows + macos.
 `
   )
   process.exit(0)

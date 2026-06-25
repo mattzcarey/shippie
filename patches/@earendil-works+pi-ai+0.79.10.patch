@@ -1,17 +1,21 @@
 diff --git a/node_modules/@earendil-works/pi-ai/dist/stream.js b/node_modules/@earendil-works/pi-ai/dist/stream.js
-index 1557f1c..81524f8 100644
+index 1557f1c..605c7a3 100644
 --- a/node_modules/@earendil-works/pi-ai/dist/stream.js
 +++ b/node_modules/@earendil-works/pi-ai/dist/stream.js
-@@ -1,5 +1,72 @@
+@@ -1,5 +1,76 @@
  import { getApiProvider } from "./api-registry.js";
  import { getEnvApiKey } from "./env-api-keys.js";
 +// shippie: transient retry — upstream candidate.
 +// Wraps provider.stream/streamSimple so a flaky network/proxy ("fetch failed") or a
 +// transient HTTP status (408/409/429/5xx) is retried instead of surfacing to the agent
 +// loop as a fatal stopReason:"error". Auth/validation 4xx and user aborts are never retried.
-+// Disable with PI_AI_DISABLE_RETRY=1.
++// Env-tunable: PI_AI_RETRY_ATTEMPTS (default 4) = retries after the first try;
++// PI_AI_RETRY_BASE_MS (default 500) = exponential backoff base, delay_i = base*3^i (+ up to 250ms jitter)
++// → defaults ~500, 1500, 4500, 13500ms (~20s window). Disable entirely with PI_AI_DISABLE_RETRY=1.
 +import { AssistantMessageEventStream } from "./utils/event-stream.js";
-+const RETRY_DELAYS_MS = [400, 800, 1600];
++const RETRY_ATTEMPTS = Number(process?.env?.PI_AI_RETRY_ATTEMPTS) || 4;
++const RETRY_BASE_MS = Number(process?.env?.PI_AI_RETRY_BASE_MS) || 500;
++const retryDelayMs = (attempt) => RETRY_BASE_MS * Math.pow(3, attempt) + Math.floor(Math.random() * 250);
 +const TRANSIENT_RE = /fetch failed|ECONNRESET|ETIMEDOUT|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|socket hang up|premature close|connection (error|reset)|stream (error|interrupted)|request timed out|too many requests|rate.?limit|overloaded|over[_ ]?capacity|service unavailable|bad gateway|gateway timeout|internal server error/i;
 +function isRetryableStatus(s) {
 +    return s === 408 || s === 409 || s === 429 || (typeof s === "number" && s >= 500);
@@ -46,9 +50,9 @@ index 1557f1c..81524f8 100644
 +                for await (const ev of inner)
 +                    buf.push(ev);
 +                const result = await inner.result();
-+                const canRetry = attempt < RETRY_DELAYS_MS.length && !options?.signal?.aborted;
++                const canRetry = attempt < RETRY_ATTEMPTS && !options?.signal?.aborted;
 +                if (isTransientResult(result) && canRetry) {
-+                    await sleep(RETRY_DELAYS_MS[attempt] + Math.floor(Math.random() * 250));
++                    await sleep(retryDelayMs(attempt));
 +                    continue;
 +                }
 +                // replay the buffered events (success OR final non-retryable error)
@@ -57,8 +61,8 @@ index 1557f1c..81524f8 100644
 +                return;
 +            }
 +            catch (err) {
-+                if (isTransient(err) && attempt < RETRY_DELAYS_MS.length && !options?.signal?.aborted) {
-+                    await sleep(RETRY_DELAYS_MS[attempt] + Math.floor(Math.random() * 250));
++                if (isTransient(err) && attempt < RETRY_ATTEMPTS && !options?.signal?.aborted) {
++                    await sleep(retryDelayMs(attempt));
 +                    continue;
 +                }
 +                throw err;
@@ -75,7 +79,7 @@ index 1557f1c..81524f8 100644
  function hasExplicitApiKey(apiKey) {
      return typeof apiKey === "string" && apiKey.trim().length > 0;
  }
-@@ -20,7 +87,8 @@ function resolveApiProvider(api) {
+@@ -20,7 +91,8 @@ function resolveApiProvider(api) {
  }
  export function stream(model, context, options) {
      const provider = resolveApiProvider(model.api);
@@ -85,7 +89,7 @@ index 1557f1c..81524f8 100644
  }
  export async function complete(model, context, options) {
      const s = stream(model, context, options);
-@@ -28,7 +96,8 @@ export async function complete(model, context, options) {
+@@ -28,7 +100,8 @@ export async function complete(model, context, options) {
  }
  export function streamSimple(model, context, options) {
      const provider = resolveApiProvider(model.api);

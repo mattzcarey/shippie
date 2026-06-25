@@ -115,4 +115,97 @@ describe('openOrUpdatePr', () => {
     expect(r.changed).toBe(false)
     expect(r.prUrl).toBeNull()
   })
+
+  describe('broken-flow per-flow dedupe', () => {
+    const brokenArgs = {
+      tier: 'broken-flow' as const,
+      title: 'fix broken flow: login',
+      body: 'b',
+      paths: ['e2e/tests/login.spec.ts'],
+      flowSlug: 'login',
+    }
+
+    it('opens a NEW broken-flow PR on the stable per-flow branch with a title marker', async () => {
+      const r = await openOrUpdatePr(cfg(), brokenArgs)
+      expect(r.changed).toBe(true)
+      expect(r.reason).toBe('opened')
+      expect(r.branch).toBe('shippie-qa/fix/login')
+      // committed onto the per-flow branch (branch absent → createRef)
+      expect(rest.git.createRef).toHaveBeenCalledWith(
+        expect.objectContaining({ ref: 'refs/heads/shippie-qa/fix/login' })
+      )
+      // title carries the flow marker so the next run can find it
+      expect(rest.pulls.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          head: 'shippie-qa/fix/login',
+          title: expect.stringContaining('[flow:login]'),
+        })
+      )
+    })
+
+    it('UPDATES the same flow PR (matched by title marker) instead of opening a second', async () => {
+      // An open broken-flow PR for this flow already exists (title marker present).
+      rest.pulls.list.mockResolvedValue({
+        data: [
+          {
+            number: 11,
+            html_url: 'https://gh/pr/11',
+            title: 'fix broken flow: login [flow:login]',
+            head: { ref: 'shippie-qa/fix/login' },
+          },
+        ],
+      })
+      // Its branch exists, so commitFiles updates the ref rather than creating it.
+      rest.git.getRef.mockImplementation(async ({ ref }: { ref: string }) => {
+        if (ref === 'heads/main' || ref === 'heads/shippie-qa/fix/login') {
+          return { data: { object: { sha: 'base-sha' } } }
+        }
+        throw new Error('Not Found')
+      })
+
+      const r = await openOrUpdatePr(cfg(), brokenArgs)
+      expect(r.reason).toBe('updated existing')
+      expect(r.prUrl).toBe('https://gh/pr/11')
+      expect(r.branch).toBe('shippie-qa/fix/login')
+      expect(rest.git.updateRef).toHaveBeenCalled()
+      expect(rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({ pull_number: 11 })
+      )
+      expect(rest.pulls.create).not.toHaveBeenCalled()
+    })
+
+    it('does NOT match a different flow (title marker is flow-specific)', async () => {
+      const otherPr = {
+        number: 11,
+        html_url: 'https://gh/pr/11',
+        title: 'fix broken flow: checkout [flow:checkout]',
+        head: { ref: 'shippie-qa/fix/checkout' },
+      }
+      // Honor the `head` filter like the real API: the unfiltered title-search
+      // sees the checkout PR, but the per-branch head guard for login does not.
+      rest.pulls.list.mockImplementation(async ({ head }: { head?: string }) =>
+        head ? { data: [] } : { data: [otherPr] }
+      )
+      const r = await openOrUpdatePr(cfg(), brokenArgs)
+      expect(r.reason).toBe('opened')
+      expect(r.branch).toBe('shippie-qa/fix/login')
+      expect(rest.pulls.create).toHaveBeenCalled()
+    })
+
+    it('skips an empty diff for a broken flow (no spurious PR)', async () => {
+      rest.git.createTree.mockResolvedValue({ data: { sha: 'base-tree' } })
+      const r = await openOrUpdatePr(cfg(), brokenArgs)
+      expect(r.changed).toBe(false)
+      expect(r.reason).toBe('empty diff')
+      expect(rest.pulls.create).not.toHaveBeenCalled()
+    })
+  })
+
+  it('missing-coverage still uses the iso-week branch (regression)', async () => {
+    const r = await openOrUpdatePr(cfg(), { ...args, branch: 'shippie-qa/2026-W26' })
+    expect(r.branch).toBe('shippie-qa/2026-W26')
+    expect(rest.pulls.create).toHaveBeenCalledWith(
+      expect.objectContaining({ head: 'shippie-qa/2026-W26' })
+    )
+  })
 })

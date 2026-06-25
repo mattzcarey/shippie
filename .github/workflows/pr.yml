@@ -34,6 +34,21 @@ jobs:
       - name: Build (flue)
         run: npm run build
 
+      - name: Boot smoke (server starts → agents discovered)
+        # `flue build` listing agents != the server BOOTING — agent discovery
+        # validates at `node dist/server.mjs` boot. A clean boot runs until the
+        # timeout (rc 124 = ran-until-killed = booted OK); any other nonzero rc is
+        # a real boot crash (e.g. the agent-discovery error).
+        run: |
+          set +e
+          PORT=38271 timeout 10 node dist/server.mjs
+          rc=$?
+          if [ $rc -ne 124 ]; then
+            echo "::error::server crashed at boot (rc=$rc, expected 124=ran-until-timeout)"
+            exit 1
+          fi
+          echo "boot smoke ok (rc=124)"
+
       - name: Unit tests
         run: npm test
 

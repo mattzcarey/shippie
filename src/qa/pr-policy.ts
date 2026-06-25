@@ -21,6 +21,16 @@ export interface TierDecision {
  *   - missing-coverage → LOW bar (always accept a new green spec)
  *   - refactor-hint    → VERY HIGH bar: rejected unless there is a pressing need
  *     AND the severity is blocker/high (refactor PRs go stale fast).
+ *
+ * @example
+ * decideTier({ flowSlug: 'checkout', tier: 'broken-flow', severity: 'high', rationale: 'pay fails' })
+ * //=> { accepted: true,  tier: 'broken-flow', reason: 'always open' }
+ * decideTier({ flowSlug: 'signup', tier: 'missing-coverage', severity: 'low', rationale: 'no spec' })
+ * //=> { accepted: true,  tier: 'missing-coverage', reason: 'low bar' }
+ * decideTier({ flowSlug: 'nav', tier: 'refactor-hint', severity: 'high', rationale: 'dup code' })
+ * //=> { accepted: false, tier: 'refactor-hint', reason: 'rejected: soft refactor' }
+ * decideTier({ flowSlug: 'nav', tier: 'refactor-hint', severity: 'high', rationale: '…', pressingNeed: true })
+ * //=> { accepted: true,  tier: 'refactor-hint', reason: 'pressing need + high severity' }
  */
 export const decideTier = (f: Finding): TierDecision => {
   if (f.tier === 'broken-flow')
@@ -58,3 +68,19 @@ export const isoWeekBranch = (now: Date = new Date()): string => {
   const { year, week } = isoYearWeek(now)
   return `shippie-qa/${year}-W${String(week).padStart(2, '0')}`
 }
+
+/** Slugify a flow identifier for use in a branch name (lowercase, dash-safe). */
+const slugify = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+/**
+ * Stable per-flow branch for a broken-flow fix (e.g. `shippie-qa/fix/checkout`).
+ * Deliberately NOT week-stamped: a broken flow should accumulate onto ONE healing
+ * PR until merged, rather than spawning a fresh PR every weekly re-run. The
+ * branch being per-flow makes the existing open-PR head guard dedupe by flow.
+ */
+export const brokenFlowBranch = (flowSlug: string): string =>
+  `shippie-qa/fix/${slugify(flowSlug)}`

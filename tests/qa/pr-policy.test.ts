@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decideTier, isoWeekBranch } from '../../src/qa/pr-policy'
+import { brokenFlowBranch, decideTier, isoWeekBranch } from '../../src/qa/pr-policy'
 
 describe('decideTier', () => {
   it('broken-flow always opens', () => {
@@ -61,5 +61,15 @@ describe('isoWeekBranch', () => {
   })
   it('zero-pads single-digit weeks', () => {
     expect(isoWeekBranch(new Date('2026-01-05T00:00:00Z'))).toBe('shippie-qa/2026-W02')
+  })
+})
+
+describe('brokenFlowBranch', () => {
+  it('builds a stable per-flow branch (not week-stamped)', () => {
+    expect(brokenFlowBranch('checkout')).toBe('shippie-qa/fix/checkout')
+  })
+  it('slugifies the flow id (lowercase, dash-safe, trimmed)', () => {
+    expect(brokenFlowBranch('Add to Cart!')).toBe('shippie-qa/fix/add-to-cart')
+    expect(brokenFlowBranch('user/profile_edit')).toBe('shippie-qa/fix/user-profile-edit')
   })
 })
