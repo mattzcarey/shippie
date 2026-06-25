@@ -44,6 +44,13 @@ inputs:
   CLOUDFLARE_GATEWAY_ID:
     description: "Cloudflare AI Gateway ID (only for model 'cloudflare-ai-gateway/<model>')"
     required: false
+  LITELLM_API_KEY:
+    description: "LiteLLM proxy API key (master or virtual key)"
+    required: false
+  LITELLM_BASE_URL:
+    description: "LiteLLM proxy base URL, e.g. https://litellm.example.com"
+    required: false
+    default: "http://localhost:4000"
   TELEMETRY:
     description: "Send anonymous usage telemetry. Set to 'false' to opt out."
     required: false
@@ -87,6 +94,8 @@ runs:
         CLOUDFLARE_API_KEY: ${{ inputs.CLOUDFLARE_API_KEY || env.CLOUDFLARE_API_KEY }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
         CLOUDFLARE_GATEWAY_ID: ${{ inputs.CLOUDFLARE_GATEWAY_ID || env.CLOUDFLARE_GATEWAY_ID }}
+        LITELLM_API_KEY: ${{ inputs.LITELLM_API_KEY || env.LITELLM_API_KEY }}
+        LITELLM_BASE_URL: ${{ inputs.LITELLM_BASE_URL || env.LITELLM_BASE_URL }}
         # GitHub commenting + PR identity (read by resolveReviewConfig)
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN || env.GITHUB_TOKEN }}
         SHIPPIE_PR_NUMBER: ${{ inputs.PR_NUMBER || github.event.pull_request.number }}

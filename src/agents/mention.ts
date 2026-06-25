@@ -1,3 +1,4 @@
+import '../common/litellm'
 import { createAgent } from '@flue/runtime'
 import { channel, commentOnIssue, getPullRequestDiff } from '../channels/github'
 
