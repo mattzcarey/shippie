@@ -9,6 +9,9 @@ name: QA CDP smoke
 on:
   workflow_dispatch: {}
 
+# No repo access needed: no checkout, just sets up node + launches Chrome.
+permissions: {}
+
 jobs:
   smoke:
     strategy:

@@ -54,7 +54,11 @@ async function getWsUrl() {
   return info.webSocketDebuggerUrl;
 }
 
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// Clamp the duration to a bounded [0, 60s] window: some callers pass a
+// user-supplied interval (e.g. `waitfor` polling), and an unbounded timer from
+// user input is a resource-exhaustion footgun.
+const sleep = (ms) =>
+  new Promise(r => setTimeout(r, Math.min(Math.max(Number(ms) || 0, 0), 60_000)));
 
 function listDaemonSockets() {
   const prefix = `cdp-${port()}-`;
