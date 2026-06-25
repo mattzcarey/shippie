@@ -19,6 +19,7 @@ cloudflare-workers-ai/@cf/openai/gpt-oss-120b
 | `openrouter`            | `OPENROUTER_API_KEY`                                         | `openrouter/anthropic/claude-sonnet-4-6`      |
 | `cloudflare-workers-ai` | `CLOUDFLARE_API_KEY` + `CLOUDFLARE_ACCOUNT_ID`              | `cloudflare-workers-ai/@cf/openai/gpt-oss-120b` |
 | `cloudflare-ai-gateway` | `CLOUDFLARE_API_KEY` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_GATEWAY_ID` | `cloudflare-ai-gateway/anthropic/claude-sonnet-4-6` |
+| `litellm`               | `LITELLM_API_KEY` + `LITELLM_BASE_URL`                               | `litellm/anthropic/claude-sonnet-4-6`             |
 
 ## Setting the model
 
@@ -90,6 +91,33 @@ call tools reliably.
 
 For a Cloudflare AI Gateway in front of these models, use the
 `cloudflare-ai-gateway` prefix and additionally set `CLOUDFLARE_GATEWAY_ID`.
+
+## LiteLLM (AI gateway)
+
+[LiteLLM](https://litellm.ai) is an AI gateway that lets you access 100+ LLM providers
+(OpenAI, Anthropic, Azure, Bedrock, Vertex, Groq, Ollama, and more) through a single
+OpenAI-compatible endpoint. Run a LiteLLM proxy and point shippie at it:
+
+```bash
+export LITELLM_API_KEY=sk-...      # proxy master or virtual key
+export LITELLM_BASE_URL=http://localhost:4000
+SHIPPIE_MODEL=litellm/anthropic/claude-sonnet-4-6 npm run review
+```
+
+GitHub Action:
+
+```yaml
+- uses: mattzcarey/shippie@main
+  with:
+    MODEL: litellm/anthropic/claude-sonnet-4-6
+  env:
+    LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+    LITELLM_BASE_URL: https://litellm.example.com
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+The model string after `litellm/` is passed directly to the proxy, so use whatever
+model identifiers your LiteLLM config defines.
 
 ## Custom OpenAI-compatible providers
 
