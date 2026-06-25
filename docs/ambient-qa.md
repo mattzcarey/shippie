@@ -1344,3 +1344,32 @@ ffmpeg). The browser-size knob works (mobile changed rendering).
   proxy. Follow-up: make the retry window env-tunable (\`PI_AI_RETRY_ATTEMPTS\`).
 - **Net:** the fan-out mechanism + viewport knob are proven; the long-run completion limit is the corporate
   proxy (env), not shippie. On GitHub-hosted runners (no such proxy) long fan-out runs complete.
+
+### 2026-06-25 — Phase 2 + cross-repo + CLI target (all via workflows, verified)
+
+A batch of follow-ups, each built by an orchestrated workflow (research → partitioned implement → verify
+with gates **+ `node dist/server.mjs` boot-check**) then independently re-verified + committed:
+
+- **Phase 2 — healer + 3-tier PRs:** \`src/qa/healer.ts\` (opus subagent: minimal source fix + a
+  failing→passing regression test for a broken flow), \`classify_finding\` tool (mechanical \`decideTier\`
+  bar), \`open_pull_request\` now opens broken-flow (fix+test, dedup by flow slug) / missing-coverage / 
+  refactor-hint PRs. Lead loop: catalog → drive (fan-out) → heal broken → classify → tiered PR(s).
+- **Env-tunable retry:** \`PI_AI_RETRY_ATTEMPTS\` (default 4) + \`PI_AI_RETRY_BASE_MS\` (base·3^i, ~20s window)
+  so hostile proxies can be survived; patch regenerated, pi-ai pinned, threaded through the action + .env.
+- **CI boot-smoke** in pr.yml (\`node dist/server.mjs\`) — catches the agent-discovery-at-boot class.
+- **Cross-OS** \`shippie qa init --cross-os\` (3-OS verify matrix).
+- **Cross-repo dispatch:** \`shippie qa fanout-init <repos>\` scaffolds a control-repo fan-out that mints a
+  GitHub App installation token (\`actions/create-github-app-token@v1\`, actions:write) and \`gh workflow run\`s
+  each target's own shippie-qa.yml (each runs under its OWN GITHUB_TOKEN — default token can't cross repos);
+  \`qa-reusable.yml\` (workflow_call) + \`docs/cross-repo-qa.md\`.
+- **CLI/terminal target (kind=cli):** the NON-WEB half. \`SHIPPIE_QA_KIND=cli\` → the agent runs the target's
+  CLI via the terminal (built-in bash) and writes dependency-free \`e2e/tests/<slug>.cli.mjs\` importing
+  \`../cli-client.mjs\` (run/runShell helper; materialized + committed; no browser). \`cli-driver\` subagent;
+  instructions branch web/cli; the verify job globs \`e2e/tests/*.mjs\` (both kinds).
+  **Dogfood PASSED live (gpt-5.5 vs a local \`greet\` CLI):** catalogued 2 scenarios, wrote 2 green
+  \`*.cli.mjs\` tests (happy path + \`exit 2\`/usage error path), case-insensitive assertions, ran clean.
+
+**Both target kinds verified live: web (cdp tests, external HTTPS, screencast) + CLI (cli tests, terminal).**
+Remaining roadmap (need external infra / a design pass): remote \`BrowserProvider\` (remote ws / browserless)
++ remote \`ComputeProvider\` (VM/E2B/Daytona) — the seams exist; and session capture (record a real dev
+session → test).
