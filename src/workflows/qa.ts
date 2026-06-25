@@ -5,7 +5,7 @@ import { connectMcpServers } from '../mcp/connect'
 import { type QaPayload, resolveQaConfig } from '../qa/config'
 import { buildQaKickoff } from '../qa/instructions'
 import { readLastPr } from '../qa/pr'
-import { materializeClient, materializeSkill } from '../qa/skill'
+import { materializeCliClient, materializeClient, materializeSkill } from '../qa/skill'
 
 /** Exposes `POST /workflows/qa` on the built server (`node dist/server.mjs`). */
 export const route: WorkflowRouteHandler = async (_c, next) => next()
@@ -49,10 +49,16 @@ export async function run({ init, payload, env }: FlueContext<QaPayload>) {
     model: cfg.model,
   })
 
-  // Make the CDP skill discoverable (agent's interactive CLI) + drop the cdp-client
-  // the committed tests import (e2e/cdp-client.mjs).
-  await materializeSkill(cfg.workspace)
-  await materializeClient(cfg.workspace)
+  // Materialize the per-kind committed test driver into the workspace:
+  //   web → the CDP skill (agent's interactive CLI) + cdp-client (e2e/cdp-client.mjs)
+  //   cli → only cli-client (e2e/cli-client.mjs); the agent's tool is the built-in
+  //         `bash`, so there is NO Chrome skill and NO cdp-client.
+  if (cfg.kind === 'cli') {
+    await materializeCliClient(cfg.workspace)
+  } else {
+    await materializeSkill(cfg.workspace)
+    await materializeClient(cfg.workspace)
+  }
 
   const mcp = await connectMcpServers(cfg.mcpServers)
   try {

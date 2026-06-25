@@ -34,6 +34,17 @@ export interface OpenPrResult {
 type Gh = Octokit['rest']
 
 const CDP_CLIENT = 'e2e/cdp-client.mjs'
+const CLI_CLIENT = 'e2e/cli-client.mjs'
+
+/**
+ * Maps a committed-test suffix to the dependency-free driver that test imports as
+ * a sibling (`../<client>`). A PR that includes any `e2e/tests/*.<suffix>` test must
+ * also commit its client so the suite runs standalone in the verify job.
+ */
+const TEST_CLIENTS: ReadonlyArray<{ suffix: string; client: string }> = [
+  { suffix: '.cdp.mjs', client: CDP_CLIENT },
+  { suffix: '.cli.mjs', client: CLI_CLIENT },
+]
 
 /**
  * Stable, human-readable marker embedded in a broken-flow PR title so the same
@@ -56,15 +67,24 @@ const findOpenPrByFlow = async (
     : undefined
 }
 
-/** If the PR commits a CDP test, also commit the driver it imports (../cdp-client.mjs). */
+/**
+ * If the PR commits an e2e test, also commit the dependency-free driver it imports
+ * as a sibling: `.cdp.mjs` → `../cdp-client.mjs`, `.cli.mjs` → `../cli-client.mjs`.
+ * Both kinds are handled in one pass (a mixed PR commits both), and each client is
+ * added only when its test is present, it isn't already listed, and it exists on disk.
+ */
 const withClient = (workspace: string, paths: string[]): string[] => {
-  const hasTest = paths.some(
-    (p) => p.endsWith('.cdp.mjs') && p.replace(/\\/g, '/').includes('e2e/tests/')
-  )
-  if (hasTest && !paths.includes(CDP_CLIENT) && existsSync(join(workspace, CDP_CLIENT))) {
-    return [...paths, CDP_CLIENT]
+  const out = [...paths]
+  const underTests = (p: string): string => p.replace(/\\/g, '/')
+  for (const { suffix, client } of TEST_CLIENTS) {
+    const hasTest = out.some(
+      (p) => p.endsWith(suffix) && underTests(p).includes('e2e/tests/')
+    )
+    if (hasTest && !out.includes(client) && existsSync(join(workspace, client))) {
+      out.push(client)
+    }
   }
-  return paths
+  return out
 }
 
 /** Commit the given files onto `branch` via the git database API (no local git creds). */
@@ -176,7 +196,8 @@ export const openOrUpdatePr = async (
     if (existingByFlow) branch = existingByFlow.head
   }
 
-  // Auto-include the CDP driver so the committed suite runs standalone in the verify job.
+  // Auto-include the test driver (cdp-client / cli-client) so the committed suite
+  // runs standalone in the verify job.
   const paths = withClient(cfg.workspace, a.paths)
 
   const head = await commitFiles(rest, {

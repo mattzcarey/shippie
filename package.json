@@ -83,6 +83,7 @@
     "files": [
         "dist",
         "bin",
-        "src/skills"
+        "src/skills",
+        "src/qa/cli-client.mjs"
     ]
 }

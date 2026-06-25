@@ -119,8 +119,8 @@ ${testShell}        env:
           CDP_IGNORE_CERT_ERRORS: "1"
         run: |
           shopt -s nullglob
-          tests=(e2e/tests/*.cdp.mjs)
-          if [ \${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.cdp.mjs found"; exit 1; fi
+          tests=(e2e/tests/*.mjs)
+          if [ \${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.mjs found"; exit 1; fi
           fail=0
           for f in "\${tests[@]}"; do
             echo "== $f =="
@@ -358,9 +358,10 @@ Next steps:
      "Allow GitHub Actions to create and approve pull requests".
   3. Run on demand:  gh workflow run shippie-qa.yml -f target=https://your-app.example.com
 
-Shippie QA writes dependency-free CDP tests (e2e/tests/*.cdp.mjs + e2e/cdp-client.mjs) that run with
-just node + Chrome — no Playwright. Run a pass locally with: shippie qa  (set SHIPPIE_QA_TARGET).
-Pass --cross-os to verify the committed tests on ubuntu + windows + macos.
+Shippie QA writes dependency-free tests that run with just node: web targets → e2e/tests/*.cdp.mjs (+
+e2e/cdp-client.mjs, drives Chrome over CDP, no Playwright); CLI/lib targets → e2e/tests/*.cli.mjs (+
+e2e/cli-client.mjs). Run a pass locally with: shippie qa  (SHIPPIE_QA_TARGET for web; SHIPPIE_QA_KIND=cli
+for a CLI/lib target). Pass --cross-os to verify the committed tests on ubuntu + windows + macos.
 `
   )
   process.exit(0)

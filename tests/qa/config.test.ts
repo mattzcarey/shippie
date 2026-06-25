@@ -4,14 +4,26 @@ import { resolveQaConfig } from '../../src/qa/config'
 const env = (o: Record<string, string>): NodeJS.ProcessEnv => o as NodeJS.ProcessEnv
 
 describe('resolveQaConfig', () => {
-  it('defaults: opus model, high thinking, local platform, telemetry on', () => {
+  it('defaults: opus model, high thinking, local platform, telemetry on, web kind', () => {
     const cfg = resolveQaConfig({}, env({}))
     expect(cfg.model).toBe('anthropic/claude-opus-4-8')
     expect(cfg.thinkingLevel).toBe('high')
     expect(cfg.platform).toBe('local')
     expect(cfg.telemetry).toBe(true)
     expect(cfg.chromeBin.length).toBeGreaterThan(0)
+    expect(cfg.kind).toBe('web')
     expect(cfg.github).toBeUndefined()
+  })
+
+  it('resolves kind: payload > env, defaulting to web', () => {
+    expect(resolveQaConfig({ kind: 'cli' }, env({})).kind).toBe('cli')
+    expect(resolveQaConfig({}, env({ SHIPPIE_QA_KIND: 'cli' })).kind).toBe('cli')
+    // payload wins over env
+    expect(resolveQaConfig({ kind: 'web' }, env({ SHIPPIE_QA_KIND: 'cli' })).kind).toBe(
+      'web'
+    )
+    // any non-'cli' env value falls back to web
+    expect(resolveQaConfig({}, env({ SHIPPIE_QA_KIND: 'nonsense' })).kind).toBe('web')
   })
 
   it('payload overrides env', () => {

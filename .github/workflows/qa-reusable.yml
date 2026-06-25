@@ -104,8 +104,8 @@ jobs:
           CDP_IGNORE_CERT_ERRORS: "1"
         run: |
           shopt -s nullglob
-          tests=(e2e/tests/*.cdp.mjs)
-          if [ ${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.cdp.mjs found"; exit 1; fi
+          tests=(e2e/tests/*.mjs)
+          if [ ${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.mjs found"; exit 1; fi
           fail=0
           for f in "${tests[@]}"; do
             echo "== $f =="

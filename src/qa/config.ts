@@ -7,9 +7,14 @@ import {
 
 export type QaPlatform = 'github' | 'local'
 
+/** Target kind: 'web' drives a browser over CDP; 'cli' drives a terminal/CLI. */
+export type QaKind = 'web' | 'cli'
+
 /** Payload accepted by the `qa` workflow (`flue run qa --payload '{...}'`). */
 export interface QaPayload {
   platform?: QaPlatform
+  /** Target kind: 'web' drives a browser (default); 'cli' drives a terminal/CLI. */
+  kind?: QaKind
   /** Path to the repository checkout to QA. Defaults to GITHUB_WORKSPACE or cwd. */
   workspace?: string
   model?: string
@@ -37,6 +42,8 @@ export interface QaGithubTarget {
 
 export interface QaConfig {
   platform: QaPlatform
+  /** Target kind: 'web' (browser/CDP) or 'cli' (terminal/CLI). Default 'web'. */
+  kind: QaKind
   workspace: string
   model: string
   thinkingLevel: ThinkingLevel
@@ -101,6 +108,8 @@ export const resolveQaConfig = (
 
   return {
     platform: base.platform,
+    // 'web' (browser/CDP) is the default; 'cli' (terminal) only when explicitly asked.
+    kind: p.kind ?? (env.SHIPPIE_QA_KIND === 'cli' ? 'cli' : 'web'),
     workspace: base.workspace,
     model: base.model,
     thinkingLevel:

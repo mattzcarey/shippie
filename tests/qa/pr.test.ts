@@ -25,6 +25,7 @@ import { openOrUpdatePr } from '../../src/qa/pr'
 let ws: string
 const cfg = (): QaConfig => ({
   platform: 'github',
+  kind: 'web',
   workspace: ws,
   model: 'm',
   thinkingLevel: 'high',

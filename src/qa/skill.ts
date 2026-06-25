@@ -48,3 +48,35 @@ export const materializeClient = async (workspace: string): Promise<void> => {
   await mkdir(dirname(dest), { recursive: true })
   await cp(src, dest)
 }
+
+/**
+ * Locate the dependency-free cli-client source. It lives in `src/qa/cli-client.mjs`
+ * (co-located with this file — there is no CLI "skill"; the agent's tool is the
+ * built-in `bash`). Works both in dev (running from `src/qa/skill.ts`, so a sibling
+ * file) and from the built artifact (running from `dist/server.mjs`, so `../src/qa`,
+ * since `files` ships `src/qa/cli-client.mjs`).
+ */
+const findCliClientSrc = (): string => {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const candidates = [
+    join(here, 'cli-client.mjs'), // dev: sibling of src/qa/skill.ts
+    join(here, '..', '..', 'src', 'qa', 'cli-client.mjs'), // built: dist → <root>/src/qa
+    join(here, '..', 'src', 'qa', 'cli-client.mjs'),
+  ]
+  for (const c of candidates) {
+    if (existsSync(c)) return c
+  }
+  throw new Error(`cli-client source not found (looked in: ${candidates.join(', ')})`)
+}
+
+/**
+ * Copy the dependency-free cli-client into `<workspace>/e2e/cli-client.mjs` — the
+ * driver that committed CLI tests import as `../cli-client.mjs`. The `cli` analogue
+ * of materializeClient: committed alongside the `.cli.mjs` tests so the suite runs
+ * with just `node` (no install, no Chrome), in CI or locally.
+ */
+export const materializeCliClient = async (workspace: string): Promise<void> => {
+  const dest = join(workspace, 'e2e', 'cli-client.mjs')
+  await mkdir(dirname(dest), { recursive: true })
+  await cp(findCliClientSrc(), dest)
+}
