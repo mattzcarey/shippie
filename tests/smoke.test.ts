@@ -69,8 +69,8 @@ describe('smoke: modules load without crashing when secrets are absent', () => {
     await expect(import('../src/agents/mention')).resolves.toBeDefined()
   })
 
-  it('imports app.ts without throwing (litellm key unset)', async () => {
-    await expect(import('../src/app')).resolves.toBeDefined()
+  it('imports common/litellm.ts without throwing (litellm key unset)', async () => {
+    await expect(import('../src/common/litellm')).resolves.toBeDefined()
   })
 })
 

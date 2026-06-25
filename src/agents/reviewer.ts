@@ -1,3 +1,4 @@
+import '../common/litellm'
 import { createAgent } from '@flue/runtime'
 import { local } from '@flue/runtime/node'
 import { createReporter } from '../github/reporter'

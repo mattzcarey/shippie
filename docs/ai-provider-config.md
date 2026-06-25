@@ -119,6 +119,16 @@ GitHub Action:
 The model string after `litellm/` is passed directly to the proxy, so use whatever
 model identifiers your LiteLLM config defines.
 
+**Important:** enable `drop_params: true` in your LiteLLM proxy config so that
+OpenAI-specific parameters (like `store`) are silently dropped for providers that
+don't support them:
+
+```yaml
+# litellm_config.yaml
+litellm_settings:
+  drop_params: true
+```
+
 ## Custom OpenAI-compatible providers
 
 To use a self-hosted or third-party OpenAI-compatible endpoint (for example Ollama or
