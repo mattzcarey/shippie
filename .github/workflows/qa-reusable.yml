@@ -1,0 +1,120 @@
+name: Shippie QA (reusable) 🧪
+
+# Reusable workflow: a target repo can run Shippie QA as a thin caller instead of
+# the inlined workflow that `shippie qa init` scaffolds. The advantage is a single,
+# central point to version-bump the whole QA pipeline across every target at once —
+# pin to a tag (@v0) and every caller picks up the same author + verify behaviour.
+#
+# This mirrors the scaffolded shippie-qa.yml: an `author` job runs the agent (holds
+# the model key, opens a PR) and a `verify` job re-runs the committed CDP tests with
+# plain node + system Chrome (no agent, no key) so the PR's own checks prove them green.
+#
+# A target repo's thin caller looks like:
+#
+#   name: Shippie QA 🧪
+#   on:
+#     schedule:
+#       - cron: "0 6 * * 1"
+#     workflow_dispatch:
+#       inputs:
+#         target: { required: false, type: string }
+#         scope:  { required: false, type: string }
+#   jobs:
+#     qa:
+#       uses: mattzcarey/shippie/.github/workflows/qa-reusable.yml@v0
+#       with:
+#         target: ${{ inputs.target }}
+#         scope:  ${{ inputs.scope }}
+#       secrets:
+#         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+#
+# Note: the cross-OS verify matrix that `shippie qa init --cross-os` emits is NOT
+# expressible cleanly through workflow_call inputs, so this reusable workflow runs
+# the ubuntu-only verify leg. For cross-OS verification keep the inlined workflow.
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "URL/path to QA (sets E2E_BASE_URL)"
+        required: false
+        type: string
+      scope:
+        description: "Flows/areas to prioritize"
+        required: false
+        type: string
+      model:
+        description: "Flue model specifier"
+        required: false
+        type: string
+        default: "anthropic/claude-opus-4-8"
+    secrets:
+      ANTHROPIC_API_KEY:
+        description: "Anthropic API key for the author job"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      branch: ${{ steps.qa.outputs.branch }}
+      changed: ${{ steps.qa.outputs.changed }}
+      base_url: ${{ steps.qa.outputs.base_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: qa
+        uses: mattzcarey/shippie/qa@v0
+        with:
+          MODEL: ${{ inputs.model || 'anthropic/claude-opus-4-8' }}
+          TARGET: ${{ inputs.target }}
+          SCOPE: ${{ inputs.scope }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The caller's own GITHUB_TOKEN authors the PR in the caller's repo.
+          GITHUB_TOKEN: ${{ github.token }}
+
+  verify:
+    needs: author
+    if: needs.author.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.author.outputs.branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+      - name: Install ffmpeg (screencast → mp4)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Run committed CDP e2e tests (node + Chrome; no deps)
+        env:
+          E2E_BASE_URL: ${{ needs.author.outputs.base_url }}
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          CDP_IGNORE_CERT_ERRORS: "1"
+        run: |
+          shopt -s nullglob
+          tests=(e2e/tests/*.mjs)
+          if [ ${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.mjs found"; exit 1; fi
+          fail=0
+          for f in "${tests[@]}"; do
+            echo "== $f =="
+            node "$f" || fail=1
+          done
+          exit $fail
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: e2e/.artifacts/
+          retention-days: 30

@@ -1,0 +1,8 @@
+node_modules
+.git
+apps
+e2e
+.shippie
+.flue-vite
+.qa-run
+*.log

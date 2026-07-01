@@ -19,6 +19,7 @@
     "package-lock.json",
     "dist/**",
     "node_modules/**",
-    "apps/**"
+    "apps/**",
+    "src/skills/**"
   ]
 }

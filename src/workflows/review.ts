@@ -31,13 +31,15 @@ export async function run({ init, payload, env }: FlueContext<ReviewPayload>) {
     return { reviewed: 0, summaryPosted: false, message: 'No changed files to review.' }
   }
 
-  sendReviewStarted({
-    enabled: cfg.telemetry,
-    repoSeed: cfg.github ? `${cfg.github.owner}/${cfg.github.repo}` : cfg.workspace,
-    platform: cfg.platform,
-    model: cfg.model,
-    reviewed: filtered.length,
-  })
+  sendReviewStarted(
+    {
+      enabled: cfg.telemetry,
+      repoSeed: cfg.github ? `${cfg.github.owner}/${cfg.github.repo}` : cfg.workspace,
+      platform: cfg.platform,
+      model: cfg.model,
+    },
+    filtered.length
+  )
 
   const mcp = await connectMcpServers(cfg.mcpServers)
   try {

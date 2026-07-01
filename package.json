@@ -11,9 +11,13 @@
         "type": "git",
         "url": "https://github.com/mattzcarey/shippie"
     },
-    "workspaces": ["apps/*"],
+    "workspaces": [
+        "apps/*"
+    ],
     "scripts": {
+        "postinstall": "patch-package",
         "review": "flue run review --target node",
+        "qa": "flue run qa --target node",
         "dev": "flue dev --target node",
         "build": "flue build --target node",
         "start": "node dist/server.mjs",
@@ -67,15 +71,19 @@
         "@types/picomatch": "^4.0.0",
         "oxfmt": "^0.56.0",
         "oxlint": "^1.71.0",
+        "patch-package": "^8.0.1",
         "typescript": "^5.1.6",
         "vitest": "^3.2.4"
     },
     "overrides": {
         "hono": "^4.12.26",
-        "esbuild": "^0.28.1"
+        "esbuild": "^0.28.1",
+        "@earendil-works/pi-ai": "0.79.10"
     },
     "files": [
         "dist",
-        "bin"
+        "bin",
+        "src/skills",
+        "src/qa/cli-client.mjs"
     ]
 }
