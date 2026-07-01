@@ -1393,3 +1393,55 @@ silently falling back to local. No \`@cloudflare/sandbox\` import was added (the
 it is referenced only in comments/TODOs), so compilation and boot are unaffected. The legacy
 browserless/E2B/Daytona strings above remain only as historical roadmap text; the live seams name the
 Cloudflare Sandbox SDK.
+
+### 2026-06-27 — deleted the provider seam (premature abstraction); supersedes 2026-06-25
+
+A thermo-nuclear code-quality review flagged `src/qa/providers/{browser,compute}.ts` as dead code: every
+exported symbol (`BrowserProvider`, `ComputeProvider`, `LocalComputeProvider`, `browserProviderKind`,
+`computeProviderKind`, `CdpEndpoint`, `BrowserHandle`) had **zero references** outside those two files and
+the docs; the one "implemented" backend (`LocalComputeProvider.sandbox`) was a pure `return local(opts)`
+identity pass-through while the real call sites (`qa-lead.ts`, `reviewer.ts`) already call `local()`
+directly; and the `*ProviderKind()` throw-paths could never fire because nothing read the env vars that
+would select them. A seam with one identity impl + one throw-stub earns nothing — so **both files (and the
+now-empty `src/qa/providers/` dir) were deleted.**
+
+This does NOT change the plan from the 2026-06-25 entry: remote execution is still LOCAL-ONLY today, and the
+single planned remote backend is still the **Cloudflare Sandbox SDK** (`@cloudflare/sandbox`). The
+difference is that the direction now lives in docs/comments, not in speculative interface code. The
+`BrowserProvider`/`ComputeProvider` abstraction will be (re)introduced as real code — with at least one
+genuine remote implementation alongside `local` — when the Cloudflare Sandbox backend is actually built.
+The §10 design sketch above remains the reference for that future work.
+
+### 2026-07-01 — finished the thermo-nuclear code-quality cleanup (the rest of the audit)
+
+The previous session's audit produced 8 confirmed findings and started applying them, but died mid-refactor
+(API socket error) with the tree half-done. This session finished the remaining findings; every change is
+behavior-preserving and guarded:
+
+- **#2 — one driver profile.** `browser-driver.ts` + `cli-driver.ts` (byte-identical `defineAgentProfile`
+  calls) collapsed into a single `src/qa/driver.ts` `driverProfile(cfg)` that resolves `cfg.kind` to the
+  ONE matching profile (`browser-driver` for web, `cli-driver` for cli). `qa-lead` now declares
+  `[driverProfile(cfg), healerProfile(cfg)]` instead of always declaring both drivers — the dead per-run
+  profile is gone. Names/descriptions/instructions preserved exactly; server still boots + discovers.
+- **#4 — the verdict/tiered-PR JSON contract lives in ONE place.** The kickoff builders forked web-vs-cli
+  and copy-pasted steps 4-8 (COLLECT→HEAL→CLASSIFY→OPEN-PRs→FINISH-JSON) — the contract the lead, drivers,
+  and healer all exchange, which could silently drift. Extracted to a single `buildKickoffTail(vocab)`
+  rendered from a small `KickoffVocab` row (`noun`, `ext`, `appWord`, `clientArtifact`, `healerShare`,
+  `taskInput`). Steps 1-3 (EXPLORE/CATALOG/FAN-OUT) genuinely differ per kind and stay per-head. **Proven
+  safe:** the web output is byte-for-byte unchanged; the cli output is whitespace-normalized identical
+  (only re-wrapped onto the shared skeleton — zero semantic/vocabulary change). A new
+  `tests/qa/instructions.test.ts` snapshots every builder (both kinds, `process.platform` stubbed to Linux)
+  so the two kinds can never drift again.
+- **#6 — the scaffolded Actions YAML is real YAML.** `bin/shippie.mjs` embedded ~234 lines of workflow YAML
+  as escaped JS template literals (27 hand-escaped `${{ }}`). Moved to `bin/templates/{review,qa,fanout}.yml`
+  (shipped via `files: ["bin"]`) with `{{TOKEN}}` substitution through a new `bin/templates.mjs` renderer;
+  the only remaining escapes are the 2 in the dynamic cross-OS matrix fragment. `bin/shippie.mjs` drops to
+  ~285 lines of pure CLI dispatch. **Proven safe:** all five scaffold variants (review · qa · qa --cross-os
+  · fanout empty · fanout with repos) render byte-for-byte identical to the pre-refactor output;
+  `tests/bin/templates.test.ts` snapshots them.
+- The already-applied parts of the audit (delete the dead `providers/` seam · collapse the telemetry
+  builders into one `sendEvent` · make `run_spec` kind-agnostic + wire `E2E_CWD`) were committed alongside,
+  with their loose ends fixed (formatting + a stale single-arg test call).
+
+126 tests pass; `tsc`, `oxlint`, `oxfmt --check`, `flue build`, and the `node dist/server.mjs` boot smoke
+are all green.
