@@ -1479,3 +1479,24 @@ Matt's account): a real review of a planted probe produced 3 anchored inline `su
 hardcoded secret, `:4-6` div-by-zero, `:8-11` untyped + key leak) + a summary — proving the full loop
 (diff → agent → tool-calls → summary → reporter) on beta.9. `tsc`, `oxlint`, `oxfmt --check`, 126 tests,
 `flue build`, and the boot smoke are all green.
+
+### 2026-07-01 — centralised model configuration (no hardcoded per-agent models)
+
+The live cli-kind QA above surfaced a real wart: the `cli-driver` subagent died with "No API key for
+provider: anthropic" even though the run used a Cloudflare model — because the driver/healer profiles
+**hardcoded** their model strings (`anthropic/claude-sonnet-4-6` in `driver.ts`, `anthropic/claude-opus-4-8`
+in `healer.ts`), disconnected from the config. So `SHIPPIE_QA_MODEL` moved the lead but NOT the drivers.
+
+Fixed by centralising ALL model resolution in **`src/common/models.ts`** — the single place defaults +
+env precedence live; no agent/tool/workflow hardcodes a model string anymore. Roles + precedence (first
+non-empty wins; `override` = payload `model`):
+- review + `/shippie` mention → `SHIPPIE_MODEL` → `DEFAULT_MODEL` (sonnet).
+- qa lead + healer → `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` → `DEFAULT_QA_LEAD_MODEL` (opus).
+- qa drivers → `SHIPPIE_QA_DRIVER_MODEL` → `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` → `DEFAULT_MODEL` (sonnet).
+
+Net effect: **`SHIPPIE_MODEL` alone configures the whole system**, and each role has one documented override
+that falls back to it. Zero-config still keeps the opus-lead / sonnet-driver cost split. Wiring: `qa/config.ts`
+adds a resolved `driverModel` to `QaConfig`; `driver.ts` uses `cfg.driverModel`, `healer.ts` uses `cfg.model`
+(the lead), `reviewer.ts`/`mention.ts` use `resolveModel`. `qa/action.yml` gains a `DRIVER_MODEL` input.
+New `tests/common/models.test.ts` pins the precedence; the earlier failing scenario (`SHIPPIE_MODEL=cloudflare`
+→ driver profile now resolves to the Cloudflare model, not anthropic) is verified. 129 tests green.

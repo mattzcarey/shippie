@@ -1,4 +1,5 @@
 import type { ThinkingLevel } from '@flue/runtime'
+import { resolveModel } from '../common/models'
 
 /**
  * Remote MCP server entry. Flue only supports remote (HTTP/SSE) MCP transports,
@@ -57,7 +58,6 @@ export interface ReviewConfig {
   mcpServers: Record<string, McpServerInput>
 }
 
-const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-6'
 const DEFAULT_THINKING: ThinkingLevel = 'medium'
 
 const parseMcpServers = (
@@ -94,7 +94,7 @@ export const resolveReviewConfig = (
 
   const platform: ReviewPlatform = p.platform ?? (env.GITHUB_ACTIONS ? 'github' : 'local')
   const workspace = p.workspace ?? env.GITHUB_WORKSPACE ?? process.cwd()
-  const model = p.model ?? env.SHIPPIE_MODEL ?? DEFAULT_MODEL
+  const model = resolveModel(env, p.model)
   const thinkingLevel =
     p.thinkingLevel ?? (env.SHIPPIE_THINKING_LEVEL as ThinkingLevel) ?? DEFAULT_THINKING
   const reviewLanguage = p.reviewLanguage ?? env.SHIPPIE_REVIEW_LANGUAGE ?? 'English'

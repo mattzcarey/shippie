@@ -3,9 +3,12 @@ description: "Autonomous end-to-end QA agent: explore, drive flows in headless C
 author: "Matt Carey"
 inputs:
   MODEL:
-    description: "Flue model specifier, e.g. anthropic/claude-opus-4-8"
+    description: "Model for the QA lead + healer, e.g. anthropic/claude-opus-4-8 (also the driver default unless DRIVER_MODEL is set)"
     required: false
     default: "anthropic/claude-opus-4-8"
+  DRIVER_MODEL:
+    description: "Override the per-flow driver model (cheap 'hands' tier). Defaults to MODEL. (SHIPPIE_QA_DRIVER_MODEL)"
+    required: false
   TARGET:
     description: "URL/path under test → E2E_BASE_URL for the generated specs"
     required: false
@@ -87,6 +90,7 @@ runs:
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.CLOUDFLARE_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID }}
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN || env.GITHUB_TOKEN }}
         SHIPPIE_MODEL: ${{ inputs.MODEL }}
+        SHIPPIE_QA_DRIVER_MODEL: ${{ inputs.DRIVER_MODEL }}
         SHIPPIE_QA_TARGET: ${{ inputs.TARGET }}
         SHIPPIE_QA_SCOPE: ${{ inputs.SCOPE }}
         SHIPPIE_QA_BRANCH: ${{ inputs.BRANCH }}

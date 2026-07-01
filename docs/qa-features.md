@@ -14,14 +14,13 @@ The authoritative answer to *"what can the Shippie QA agent do, and how does it 
 
 ### The lead + its subagents
 
-The run is a single flue agent — the **QA lead** (`src/agents/qa-lead.ts`, depth 0) — that fans out to three subagent **profiles** (all depth-1 siblings). The lead carries the judgment (model `anthropic/claude-opus-4-8`, `thinkingLevel: 'high'`); the per-flow drivers are cheap "hands".
+The run is a single flue agent — the **QA lead** (`src/agents/qa-lead.ts`, depth 0) — that fans out to two subagent **profiles** (depth-1 siblings): a kind-aware driver (`src/qa/driver.ts`) and the healer. All model strings resolve centrally through `src/common/models.ts` — no model is hardcoded per-agent (see §6). The "Model default" column below is the **zero-config** model; setting `SHIPPIE_MODEL` (or `SHIPPIE_QA_MODEL`) moves the whole system.
 
-| Agent | File | Model | Thinking | Role |
-|-------|------|-------|----------|------|
-| **qa-lead** | `src/agents/qa-lead.ts` | `anthropic/claude-opus-4-8` | high | Explores, catalogs flows, fans out, classifies findings, opens PRs. Owns the lead-only tools. |
-| **browser-driver** | `src/qa/browser-driver.ts` | `anthropic/claude-sonnet-4-6` | medium | (web kind) Drives ONE flow in its own headless Chrome over CDP, writes + self-verifies a `.cdp.mjs` test, returns a JSON verdict. |
-| **cli-driver** | `src/qa/cli-driver.ts` | `anthropic/claude-sonnet-4-6` | medium | (cli kind) Runs ONE CLI scenario via bash, writes + self-verifies a `.cli.mjs` test, returns a JSON verdict. |
-| **healer** | `src/qa/healer.ts` | `anthropic/claude-opus-4-8` | high | Repairs ONE broken flow — minimal source fix + a failing→passing regression test, verified green. The headline capability, so it gets the strongest model. |
+| Agent | File | Model default | Thinking | Role |
+|-------|------|---------------|----------|------|
+| **qa-lead** | `src/agents/qa-lead.ts` | `anthropic/claude-opus-4-8` (`SHIPPIE_QA_MODEL`→`SHIPPIE_MODEL`) | high | Explores, catalogs flows, fans out, classifies findings, opens PRs. Owns the lead-only tools. |
+| **browser-driver** / **cli-driver** | `src/qa/driver.ts` (one factory, kind-picked) | `anthropic/claude-sonnet-4-6` (inherits the lead; override `SHIPPIE_QA_DRIVER_MODEL`) | medium | Drives ONE flow — web: its own headless Chrome over CDP → `.cdp.mjs`; cli: the target CLI via bash → `.cli.mjs` — writes + self-verifies the test, returns a JSON verdict. |
+| **healer** | `src/qa/healer.ts` | = the lead model (judgment tier) | high | Repairs ONE broken flow — minimal source fix + a failing→passing regression test, verified green. The headline capability, so it runs on the lead model. |
 
 > **Why the subagent profiles live in `src/qa/` and not `src/agents/`:** flue auto-discovers every `src/agents/*.ts` as a top-level agent that must default-export `createAgent()`. A subagent profile is not that — it is built with `defineAgentProfile` and passed to the lead's `subagents: [...]`. Putting these in `src/agents/` would crash the flue server at boot.
 
@@ -170,9 +169,12 @@ One image — `node:22-bookworm-slim` + Chromium + flue + the agent + the `src/s
 
 Resolved by `resolveQaConfig` (`src/qa/config.ts`) from the workflow **payload** and the **environment** (payload wins). It reuses `resolveReviewConfig` for the shared fields (platform/workspace/telemetry/mcp), then resolves the GitHub target **without a PR number** (QA opens PRs; it does not review an existing one).
 
+**Models are configured centrally** in `src/common/models.ts` — the single place model defaults and env precedence live; nothing hardcodes a model string. `SHIPPIE_MODEL` alone configures the whole system (review + QA lead + drivers + healer + the `/shippie` mention agent); each role then has one documented override (`SHIPPIE_QA_MODEL` for the lead/healer, `SHIPPIE_QA_DRIVER_MODEL` for the drivers) that falls back to it. Zero-config keeps the opus-lead / sonnet-driver cost split; set `SHIPPIE_MODEL=<provider/model>` and every agent follows it.
+
 | Knob | Payload field | Env var(s) | Default |
 |------|---------------|-----------|---------|
-| Model | `model` | `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` | `anthropic/claude-opus-4-8` |
+| Model (lead + healer) | `model` | `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` | `anthropic/claude-opus-4-8` |
+| Driver model | `driverModel` | `SHIPPIE_QA_DRIVER_MODEL` → `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` | `anthropic/claude-sonnet-4-6` |
 | Thinking level | `thinkingLevel` | `SHIPPIE_QA_THINKING_LEVEL` | `high` |
 | Target kind | `kind` | `SHIPPIE_QA_KIND` (`cli` to switch) | `web` |
 | Target under test | `target` | `SHIPPIE_QA_TARGET` | none (web: boot a dev server; cli: detect/build) |
