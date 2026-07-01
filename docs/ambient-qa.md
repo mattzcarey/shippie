@@ -1445,3 +1445,58 @@ behavior-preserving and guarded:
 
 126 tests pass; `tsc`, `oxlint`, `oxfmt --check`, `flue build`, and the `node dist/server.mjs` boot smoke
 are all green.
+
+### 2026-07-01 — migrated to flue 1.0.0-beta.9 (breaking; closes #477)
+
+Moved `@flue/runtime` / `@flue/cli` (+ transitive `@flue/sdk`) from `beta.1` to **`beta.9`** (exact pins).
+`@flue/github` has no beta.3+ (still `beta.1`), so this is a **deliberate split** — safe because
+`@flue/github@beta.1` has ZERO `@flue/runtime` dependency (just `hono`), so there is no second runtime; its
+channel object still satisfies beta.9's contract (boot-verified). beta.9 is an API restructure, not a bump:
+
+- **Tools** — `defineTool` changed from `{ parameters, execute(args) }` to `{ input, run(ctx) }` where args
+  arrive as `ctx.input`. Migrated all 7 (`suggest_change`, `catalog_flows`, `classify_finding`,
+  `open_pull_request`, `run_spec`, and the 2 github channel tools).
+- **Agents** — the initializer now receives only `{ id, env }` (no per-invocation `payload`); the
+  `createAgent<T>` generic is now the ENV type. `reviewer` + `qa-lead` resolve their whole config from `env`
+  (the vars the Action/CLI already set) and **self-connect any MCP tools** in the initializer (the old
+  `init(agent, { tools })` seam is gone). The workflow feeds the actual work via the prompt text.
+- **Workflows** — `run`/`route`/`FlueContext` → `export default defineWorkflow({ agent, input, run(ctx) })`.
+  The payload flows to the workflow's `run`; it drives the agent over `ctx.harness.session().prompt()`.
+  `input` must be a top-level `v.object({})` schema (record/union are rejected). **GOTCHA (cost a while to
+  find):** a discovered workflow is only HTTP-reachable (`POST /workflows/<name>`) when it ALSO exports a
+  `route` middleware — `registeredWorkflowsForTransport` filters on `workflow.route !== undefined`. Dropping
+  `route` made the workflow dispatch-only and every HTTP call 404'd as "not registered". Kept the
+  pass-through `export const route`.
+- **pi-ai** — beta.9 imports `@earendil-works/pi-ai/compat`, a subpath that only exists in `0.80.x`. The
+  repo pinned pi-ai to `0.79.10` (via an `overrides` entry) so the transient-retry patch would apply — that
+  is now **impossible**, so the override AND `patches/@earendil-works+pi-ai+0.79.10.patch` were removed; pi-ai
+  floats to beta.9's `^0.80.2` (`0.80.3`). Re-creating the env-tunable retry against 0.80.x is a follow-up.
+- **Tests** — updated ~9 mocks/assertions to the new tool + workflow shapes; rewrote `workflows/review.test`
+  to drive `workflow.action.run({ harness })` (no more `init`/`mcp.close`).
+
+**Live-verified end-to-end** against **Cloudflare Workers AI** (`cloudflare-workers-ai/@cf/moonshotai/kimi-k2.7-code`,
+Matt's account): a real review of a planted probe produced 3 anchored inline `suggest_change` comments (`:2`
+hardcoded secret, `:4-6` div-by-zero, `:8-11` untyped + key leak) + a summary — proving the full loop
+(diff → agent → tool-calls → summary → reporter) on beta.9. `tsc`, `oxlint`, `oxfmt --check`, 126 tests,
+`flue build`, and the boot smoke are all green.
+
+### 2026-07-01 — centralised model configuration (no hardcoded per-agent models)
+
+The live cli-kind QA above surfaced a real wart: the `cli-driver` subagent died with "No API key for
+provider: anthropic" even though the run used a Cloudflare model — because the driver/healer profiles
+**hardcoded** their model strings (`anthropic/claude-sonnet-4-6` in `driver.ts`, `anthropic/claude-opus-4-8`
+in `healer.ts`), disconnected from the config. So `SHIPPIE_QA_MODEL` moved the lead but NOT the drivers.
+
+Fixed by centralising ALL model resolution in **`src/common/models.ts`** — the single place defaults +
+env precedence live; no agent/tool/workflow hardcodes a model string anymore. Roles + precedence (first
+non-empty wins; `override` = payload `model`):
+- review + `/shippie` mention → `SHIPPIE_MODEL` → `DEFAULT_MODEL` (sonnet).
+- qa lead + healer → `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` → `DEFAULT_QA_LEAD_MODEL` (opus).
+- qa drivers → `SHIPPIE_QA_DRIVER_MODEL` → `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` → `DEFAULT_MODEL` (sonnet).
+
+Net effect: **`SHIPPIE_MODEL` alone configures the whole system**, and each role has one documented override
+that falls back to it. Zero-config still keeps the opus-lead / sonnet-driver cost split. Wiring: `qa/config.ts`
+adds a resolved `driverModel` to `QaConfig`; `driver.ts` uses `cfg.driverModel`, `healer.ts` uses `cfg.model`
+(the lead), `reviewer.ts`/`mention.ts` use `resolveModel`. `qa/action.yml` gains a `DRIVER_MODEL` input.
+New `tests/common/models.test.ts` pins the precedence; the earlier failing scenario (`SHIPPIE_MODEL=cloudflare`
+→ driver profile now resolves to the Cloudflare model, not anthropic) is verified. 129 tests green.

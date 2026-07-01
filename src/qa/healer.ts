@@ -4,14 +4,6 @@ import type { QaConfig } from './config'
 import { buildHealerInstructions } from './instructions'
 
 /**
- * Judgment-heavy model for the healer — repairing a real bug means reading app
- * source, root-causing, and writing a minimal correct fix. This is the headline
- * win of the system, so the healer gets the strongest model (the lead's default),
- * not the cheap "hands" model the per-flow drivers run on.
- */
-const HEALER_MODEL = 'anthropic/claude-opus-4-8'
-
-/**
  * `healer` — a subagent PROFILE the lead delegates to for ONE broken catalogued
  * flow. Given the flow's spec, its failing repro, and the driver's fixHint, it
  * investigates the app/repo (white-box to FIX, black-box to TEST), attempts a
@@ -46,7 +38,10 @@ export const healerProfile = (cfg: QaConfig): AgentProfile =>
       '(verified green with run_spec). If it cannot fix the app, it leaves the source untouched, writes ' +
       'a repro spec capturing the broken behavior, and returns a precise diagnosis for a human. Give it ' +
       'the flow slug, its spec, the driver fixHint/summary, and the base URL. Returns a JSON heal verdict.',
-    model: HEALER_MODEL,
+    // Judgment tier: repairing a real bug means reading source, root-causing, and a
+    // minimal correct fix — the headline win — so the healer runs on the LEAD model
+    // (cfg.model), not the cheap driver tier. Resolved centrally (src/common/models.ts).
+    model: cfg.model,
     thinkingLevel: 'high',
     instructions: buildHealerInstructions(cfg),
     tools: [createRunSpecTool(cfg)],

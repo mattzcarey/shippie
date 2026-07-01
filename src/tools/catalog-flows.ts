@@ -13,7 +13,7 @@ export const createCatalogFlowsTool = (cfg: QaConfig) =>
     description:
       'Persist the discovered user flows as e2e/specs/<slug>.md (steps + expected outcomes). ' +
       'The catalog is the backlog the drivers turn into CDP tests, and a review artifact.',
-    parameters: v.object({
+    input: v.object({
       flows: v.array(
         v.object({
           slug: v.pipe(
@@ -30,5 +30,5 @@ export const createCatalogFlowsTool = (cfg: QaConfig) =>
         })
       ),
     }),
-    execute: async ({ flows }) => writeCatalog(cfg.workspace, flows),
+    run: async ({ input: { flows } }) => writeCatalog(cfg.workspace, flows),
   })

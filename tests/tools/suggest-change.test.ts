@@ -17,9 +17,9 @@ describe('createSuggestChangeTool', () => {
     const tool = createSuggestChangeTool(reporter)
 
     expect(tool.name).toBe('suggest_change')
-    expect(tool.parameters).toBeTypeOf('object')
-    expect(tool.parameters).not.toBeNull()
-    expect(tool.execute).toBeTypeOf('function')
+    expect(tool.input).toBeTypeOf('object')
+    expect(tool.input).not.toBeNull()
+    expect(tool.run).toBeTypeOf('function')
   })
 
   it('forwards args to reporter.postReviewComment and returns the url', async () => {
@@ -33,7 +33,7 @@ describe('createSuggestChangeTool', () => {
       startLine: 10,
       endLine: 12,
     }
-    const result = await tool.execute(args)
+    const result = await tool.run({ input: args })
 
     expect(postReviewComment).toHaveBeenCalledTimes(1)
     expect(postReviewComment).toHaveBeenCalledWith({
@@ -51,9 +51,11 @@ describe('createSuggestChangeTool', () => {
     const reporter = makeReporter(postReviewComment)
     const tool = createSuggestChangeTool(reporter)
 
-    const result = await tool.execute({
-      filePath: 'src/index.ts',
-      comment: 'fix this',
+    const result = await tool.run({
+      input: {
+        filePath: 'src/index.ts',
+        comment: 'fix this',
+      },
     })
 
     expect(postReviewComment).toHaveBeenCalledTimes(1)

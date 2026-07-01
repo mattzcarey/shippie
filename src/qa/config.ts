@@ -1,4 +1,5 @@
 import type { ThinkingLevel } from '@flue/runtime'
+import { resolveQaDriverModel, resolveQaLeadModel } from '../common/models'
 import {
   type McpServerInput,
   type ReviewPayload,
@@ -18,6 +19,8 @@ export interface QaPayload {
   /** Path to the repository checkout to QA. Defaults to GITHUB_WORKSPACE or cwd. */
   workspace?: string
   model?: string
+  /** Override the per-flow driver model (else inherits the lead model / SHIPPIE_MODEL). */
+  driverModel?: string
   thinkingLevel?: ThinkingLevel
   /** Anonymous usage telemetry. Defaults to true; set false to opt out. */
   telemetry?: boolean
@@ -45,7 +48,10 @@ export interface QaConfig {
   /** Target kind: 'web' (browser/CDP) or 'cli' (terminal/CLI). Default 'web'. */
   kind: QaKind
   workspace: string
+  /** The QA lead + healer model (judgment tier). */
   model: string
+  /** The per-flow driver model (cheap "hands" tier). */
+  driverModel: string
   thinkingLevel: ThinkingLevel
   telemetry: boolean
   target?: string
@@ -58,8 +64,6 @@ export interface QaConfig {
   github?: QaGithubTarget
   mcpServers: Record<string, McpServerInput>
 }
-
-const DEFAULT_QA_MODEL = 'anthropic/claude-opus-4-8'
 
 const defaultChromeBin = (): string => {
   switch (process.platform) {
@@ -84,7 +88,7 @@ export const resolveQaConfig = (
   env: NodeJS.ProcessEnv = process.env
 ): QaConfig => {
   const p = payload ?? {}
-  const model = p.model ?? env.SHIPPIE_QA_MODEL ?? env.SHIPPIE_MODEL ?? DEFAULT_QA_MODEL
+  const model = resolveQaLeadModel(env, p.model)
 
   // Reuse review's resolution for the shared fields. The constructed payload only
   // carries the bits review understands; QA-specific fields are handled below.
@@ -112,6 +116,7 @@ export const resolveQaConfig = (
     kind: p.kind ?? (env.SHIPPIE_QA_KIND === 'cli' ? 'cli' : 'web'),
     workspace: base.workspace,
     model: base.model,
+    driverModel: resolveQaDriverModel(env, p.driverModel),
     thinkingLevel:
       p.thinkingLevel ?? (env.SHIPPIE_QA_THINKING_LEVEL as ThinkingLevel) ?? 'high',
     telemetry: base.telemetry,

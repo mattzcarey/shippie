@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Mock only the collaborators that touch git, GitHub, or MCP transports.
-// `filterFiles` and `resolveReviewConfig` are exercised for real.
+// Mock only the collaborators that touch git or GitHub. `filterFiles` and
+// `resolveReviewConfig` are exercised for real (the latter reads process.env).
 const getChangedFiles = vi.fn()
 vi.mock('../../src/review/diff', async (orig) => ({
   ...(await orig<typeof import('../../src/review/diff')>()),
@@ -15,15 +15,20 @@ vi.mock('../../src/github/reporter', () => ({
   createReporter: (...args: unknown[]) => createReporter(...args),
 }))
 
-const mcpClose = vi.fn().mockResolvedValue(undefined)
-const connectMcpServers = vi.fn().mockResolvedValue({ tools: [], close: mcpClose })
-vi.mock('../../src/mcp/connect', () => ({
-  connectMcpServers: (...args: unknown[]) => connectMcpServers(...args),
-}))
+import reviewWorkflow from '../../src/workflows/review'
 
-import { run } from '../../src/workflows/review'
+// flue beta.9: the workflow is defineWorkflow({ agent, run }). Its run handler lives
+// on `.action.run(context)` and receives { harness, log, input }. Config resolves from
+// process.env (the agent self-configures the same way + self-connects any MCP tools),
+// so the workflow no longer takes a payload or manages MCP lifecycle.
+const makeHarness = (text: unknown = 'SUMMARY') => {
+  const session = { prompt: vi.fn().mockResolvedValue({ text }) }
+  const harness = { session: vi.fn().mockResolvedValue(session) }
+  return { harness, session }
+}
 
-const PAYLOAD = { platform: 'local' as const, workspace: process.cwd(), ignore: [] }
+const runWorkflow = (harness: unknown) =>
+  reviewWorkflow.action.run({ harness, log: {}, input: {} } as never)
 
 const makeFile = (fileName: string) => ({
   fileName,
@@ -31,15 +36,6 @@ const makeFile = (fileName: string) => ({
   changedLines: [{ start: 1, end: 1 }],
   diff: `diff --git a/${fileName} b/${fileName}\n@@ -0,0 +1 @@\n+export const a = 1`,
 })
-
-const makeInit = () => {
-  const session = {
-    prompt: vi.fn().mockResolvedValue({ text: 'SUMMARY', usage: {}, model: {} }),
-  }
-  const harness = { session: vi.fn().mockResolvedValue(session) }
-  const init = vi.fn().mockResolvedValue(harness)
-  return { init, harness, session }
-}
 
 describe('review workflow run()', () => {
   beforeEach(() => {
@@ -50,41 +46,36 @@ describe('review workflow run()', () => {
   afterEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
-  it('returns early without initializing the agent when no files changed', async () => {
+  it('returns early without driving the agent when no files changed', async () => {
     getChangedFiles.mockResolvedValue({ files: [], rawDiff: '' })
-    const { init } = makeInit()
+    const { harness } = makeHarness()
 
-    const result = await run({ init, payload: PAYLOAD, env: {} } as never)
+    const result = await runWorkflow(harness)
 
     expect(result).toEqual({
       reviewed: 0,
       summaryPosted: false,
       message: 'No changed files to review.',
     })
-    expect(init).not.toHaveBeenCalled()
-    expect(connectMcpServers).not.toHaveBeenCalled()
+    expect(harness.session).not.toHaveBeenCalled()
     expect(createReporter).not.toHaveBeenCalled()
   })
 
-  it('runs the agent, posts the summary, and closes MCP for a changed file', async () => {
+  it('drives the agent over the harness and posts the summary for a changed file', async () => {
     getChangedFiles.mockResolvedValue({
       files: [makeFile('src/changed.ts')],
       rawDiff: 'raw',
     })
-    const { init, harness, session } = makeInit()
+    const { harness, session } = makeHarness()
 
-    const result = await run({ init, payload: PAYLOAD, env: {} } as never)
+    const result = await runWorkflow(harness)
 
-    expect(init).toHaveBeenCalledTimes(1)
-    expect(init.mock.calls[0][1]).toEqual({ tools: [] })
     expect(harness.session).toHaveBeenCalledTimes(1)
     expect(session.prompt).toHaveBeenCalledTimes(1)
     expect(typeof session.prompt.mock.calls[0][0]).toBe('string')
-
-    expect(connectMcpServers).toHaveBeenCalledTimes(1)
-    expect(mcpClose).toHaveBeenCalledTimes(1)
 
     expect(createReporter).toHaveBeenCalledTimes(1)
     expect(postSummary).toHaveBeenCalledWith('SUMMARY')
@@ -102,13 +93,12 @@ describe('review workflow run()', () => {
       files: [makeFile('src/changed.ts')],
       rawDiff: 'raw',
     })
-    // The model returns blank text; run() should substitute a default summary.
-    const session = { prompt: vi.fn().mockResolvedValue({ text: '   ' }) }
-    const init = vi.fn().mockResolvedValue({
-      session: vi.fn().mockResolvedValue(session),
-    })
+    const { harness } = makeHarness('   ')
 
-    const result = await run({ init, payload: PAYLOAD, env: {} } as never)
+    const result = (await runWorkflow(harness)) as {
+      reviewed: number
+      summaryPosted: boolean
+    }
 
     expect(postSummary).toHaveBeenCalledWith(
       'Shippie completed the review; see the inline comments.'
@@ -117,40 +107,32 @@ describe('review workflow run()', () => {
     expect(result.summaryPosted).toBe(true)
   })
 
-  it('still closes MCP when the session prompt throws', async () => {
+  it('propagates the error when the session prompt throws', async () => {
     getChangedFiles.mockResolvedValue({
       files: [makeFile('src/changed.ts')],
       rawDiff: 'raw',
     })
     const session = { prompt: vi.fn().mockRejectedValue(new Error('boom')) }
-    const init = vi.fn().mockResolvedValue({
-      session: vi.fn().mockResolvedValue(session),
-    })
+    const harness = { session: vi.fn().mockResolvedValue(session) }
 
-    await expect(run({ init, payload: PAYLOAD, env: {} } as never)).rejects.toThrow(
-      'boom'
-    )
-    expect(mcpClose).toHaveBeenCalledTimes(1)
+    await expect(runWorkflow(harness)).rejects.toThrow('boom')
   })
 
-  it('skips ignored files via the real filterFiles', async () => {
+  it('skips ignored files via the real filterFiles (ignore from env)', async () => {
+    vi.stubEnv('SHIPPIE_IGNORE', '**/keep.ts')
     getChangedFiles.mockResolvedValue({
       files: [makeFile('src/keep.ts')],
       rawDiff: 'raw',
     })
-    const { init } = makeInit()
+    const { harness } = makeHarness()
 
-    const result = await run({
-      init,
-      payload: { ...PAYLOAD, ignore: ['**/keep.ts'] },
-      env: {},
-    } as never)
+    const result = await runWorkflow(harness)
 
     expect(result).toEqual({
       reviewed: 0,
       summaryPosted: false,
       message: 'No changed files to review.',
     })
-    expect(init).not.toHaveBeenCalled()
+    expect(harness.session).not.toHaveBeenCalled()
   })
 })

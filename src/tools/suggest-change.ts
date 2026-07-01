@@ -12,7 +12,7 @@ export const createSuggestChangeTool = (reporter: Reporter) =>
     name: 'suggest_change',
     description:
       'Post an inline review comment on a specific file and line range. Only use this on files with actionable problems. If several issues are on nearby lines, combine them into one comment that spans all of those lines. Include a fenced ```suggestion``` block with a direct replacement when proposing a concrete fix.',
-    parameters: v.object({
+    input: v.object({
       filePath: v.pipe(
         v.string(),
         v.minLength(1),
@@ -36,7 +36,7 @@ export const createSuggestChangeTool = (reporter: Reporter) =>
         )
       ),
     }),
-    execute: async ({ filePath, comment, startLine, endLine }) => {
+    run: async ({ input: { filePath, comment, startLine, endLine } }) => {
       const url = await reporter.postReviewComment({
         filePath,
         comment,

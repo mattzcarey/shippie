@@ -71,9 +71,13 @@ describe('smoke: modules load without crashing when secrets are absent', () => {
 })
 
 describe('smoke: review workflow public surface', () => {
-  it('exports a run function and a route', () => {
-    expect(typeof reviewWorkflow.run).toBe('function')
-    expect(reviewWorkflow.route).toBeDefined()
+  it('default-exports a flue workflow definition and a route (HTTP transport)', () => {
+    // flue beta.9: a workflow is `export default defineWorkflow({ agent, run })`, plus a
+    // `route` export that opts it into HTTP transport (POST /workflows/review).
+    expect(reviewWorkflow.default).toBeDefined()
+    expect(reviewWorkflow.default.agent).toBeDefined()
+    expect(typeof reviewWorkflow.default.action.run).toBe('function')
+    expect(typeof reviewWorkflow.route).toBe('function')
   })
 })
 

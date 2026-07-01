@@ -27,7 +27,7 @@ export const createOpenPrTool = (cfg: QaConfig) =>
       'failing→passing regression test + its spec, and pass flowSlug so re-runs dedupe onto the same ' +
       'per-flow PR (never a 2nd PR for the same broken flow). (3) refactor-hint — open ONLY after ' +
       'classify_finding accepted the finding (very high bar). Call once per finding, after run_spec is green.',
-    parameters: v.object({
+    input: v.object({
       tier: v.picklist(['broken-flow', 'missing-coverage', 'refactor-hint']),
       title: v.string(),
       body: v.pipe(
@@ -51,7 +51,7 @@ export const createOpenPrTool = (cfg: QaConfig) =>
       ),
       branch: v.optional(v.string()),
     }),
-    execute: async (args) => {
+    run: async ({ input: args }) => {
       const result = await openOrUpdatePr(cfg, args)
       await writeLastPr(cfg.workspace, result)
       return JSON.stringify(result)

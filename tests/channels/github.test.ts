@@ -61,7 +61,7 @@ describe('github channel', () => {
 
     it('calls issues.createComment with the ref + body and returns a string', async () => {
       const tool = commentOnIssue(ref)
-      const result = await tool.execute({ body: 'looks good to me' }, {} as never)
+      const result = await tool.run({ input: { body: 'looks good to me' } })
 
       expect(mockClient.rest.issues.createComment).toHaveBeenCalledTimes(1)
       expect(mockClient.rest.issues.createComment).toHaveBeenCalledWith({
@@ -82,7 +82,7 @@ describe('github channel', () => {
 
     it('calls pulls.get with the diff media type and returns the diff string', async () => {
       const tool = getPullRequestDiff(ref)
-      const result = await tool.execute({}, {} as never)
+      const result = await tool.run({ input: {} })
 
       expect(mockClient.rest.pulls.get).toHaveBeenCalledTimes(1)
       expect(mockClient.rest.pulls.get).toHaveBeenCalledWith({

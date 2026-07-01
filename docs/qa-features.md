@@ -14,14 +14,13 @@ The authoritative answer to *"what can the Shippie QA agent do, and how does it 
 
 ### The lead + its subagents
 
-The run is a single flue agent — the **QA lead** (`src/agents/qa-lead.ts`, depth 0) — that fans out to three subagent **profiles** (all depth-1 siblings). The lead carries the judgment (model `anthropic/claude-opus-4-8`, `thinkingLevel: 'high'`); the per-flow drivers are cheap "hands".
+The run is a single flue agent — the **QA lead** (`src/agents/qa-lead.ts`, depth 0) — that fans out to two subagent **profiles** (depth-1 siblings): a kind-aware driver (`src/qa/driver.ts`) and the healer. All model strings resolve centrally through `src/common/models.ts` — no model is hardcoded per-agent (see §6). The "Model default" column below is the **zero-config** model; setting `SHIPPIE_MODEL` (or `SHIPPIE_QA_MODEL`) moves the whole system.
 
-| Agent | File | Model | Thinking | Role |
-|-------|------|-------|----------|------|
-| **qa-lead** | `src/agents/qa-lead.ts` | `anthropic/claude-opus-4-8` | high | Explores, catalogs flows, fans out, classifies findings, opens PRs. Owns the lead-only tools. |
-| **browser-driver** | `src/qa/browser-driver.ts` | `anthropic/claude-sonnet-4-6` | medium | (web kind) Drives ONE flow in its own headless Chrome over CDP, writes + self-verifies a `.cdp.mjs` test, returns a JSON verdict. |
-| **cli-driver** | `src/qa/cli-driver.ts` | `anthropic/claude-sonnet-4-6` | medium | (cli kind) Runs ONE CLI scenario via bash, writes + self-verifies a `.cli.mjs` test, returns a JSON verdict. |
-| **healer** | `src/qa/healer.ts` | `anthropic/claude-opus-4-8` | high | Repairs ONE broken flow — minimal source fix + a failing→passing regression test, verified green. The headline capability, so it gets the strongest model. |
+| Agent | File | Model default | Thinking | Role |
+|-------|------|---------------|----------|------|
+| **qa-lead** | `src/agents/qa-lead.ts` | `anthropic/claude-opus-4-8` (`SHIPPIE_QA_MODEL`→`SHIPPIE_MODEL`) | high | Explores, catalogs flows, fans out, classifies findings, opens PRs. Owns the lead-only tools. |
+| **browser-driver** / **cli-driver** | `src/qa/driver.ts` (one factory, kind-picked) | `anthropic/claude-sonnet-4-6` (inherits the lead; override `SHIPPIE_QA_DRIVER_MODEL`) | medium | Drives ONE flow — web: its own headless Chrome over CDP → `.cdp.mjs`; cli: the target CLI via bash → `.cli.mjs` — writes + self-verifies the test, returns a JSON verdict. |
+| **healer** | `src/qa/healer.ts` | = the lead model (judgment tier) | high | Repairs ONE broken flow — minimal source fix + a failing→passing regression test, verified green. The headline capability, so it runs on the lead model. |
 
 > **Why the subagent profiles live in `src/qa/` and not `src/agents/`:** flue auto-discovers every `src/agents/*.ts` as a top-level agent that must default-export `createAgent()`. A subagent profile is not that — it is built with `defineAgentProfile` and passed to the lead's `subagents: [...]`. Putting these in `src/agents/` would crash the flue server at boot.
 
@@ -137,7 +136,7 @@ SHIPPIE_QA_KIND=cli shippie qa
 
 ### The GitHub Action — `mattzcarey/shippie/qa@v0`
 
-The composite action `qa/action.yml` runs on Node 22, installs Shippie (`--include=dev` so `@flue/cli` is present), re-applies the pi-ai patch and **asserts it took** (fails loudly on version drift), then runs `npx flue run qa --root "$ROOT" --target node --payload '{"platform":"github","workspace":"$GITHUB_WORKSPACE"}'`. It exposes outputs `branch` / `changed` / `pr_url` / `base_url` read back from `.shippie/qa/last-pr.json`.
+The composite action `qa/action.yml` runs on Node 22, installs Shippie (`--include=dev` so `@flue/cli` is present), then runs `npx flue run qa --root "$ROOT" --target node --payload '{"platform":"github","workspace":"$GITHUB_WORKSPACE"}'`. It exposes outputs `branch` / `changed` / `pr_url` / `base_url` read back from `.shippie/qa/last-pr.json`.
 
 `shippie qa init` scaffolds `.github/workflows/shippie-qa.yml` (+ an `e2e/.gitignore` ignoring `.artifacts/`). The scaffolded workflow has two jobs:
 
@@ -170,9 +169,12 @@ One image — `node:22-bookworm-slim` + Chromium + flue + the agent + the `src/s
 
 Resolved by `resolveQaConfig` (`src/qa/config.ts`) from the workflow **payload** and the **environment** (payload wins). It reuses `resolveReviewConfig` for the shared fields (platform/workspace/telemetry/mcp), then resolves the GitHub target **without a PR number** (QA opens PRs; it does not review an existing one).
 
+**Models are configured centrally** in `src/common/models.ts` — the single place model defaults and env precedence live; nothing hardcodes a model string. `SHIPPIE_MODEL` alone configures the whole system (review + QA lead + drivers + healer + the `/shippie` mention agent); each role then has one documented override (`SHIPPIE_QA_MODEL` for the lead/healer, `SHIPPIE_QA_DRIVER_MODEL` for the drivers) that falls back to it. Zero-config keeps the opus-lead / sonnet-driver cost split; set `SHIPPIE_MODEL=<provider/model>` and every agent follows it.
+
 | Knob | Payload field | Env var(s) | Default |
 |------|---------------|-----------|---------|
-| Model | `model` | `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` | `anthropic/claude-opus-4-8` |
+| Model (lead + healer) | `model` | `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` | `anthropic/claude-opus-4-8` |
+| Driver model | `driverModel` | `SHIPPIE_QA_DRIVER_MODEL` → `SHIPPIE_QA_MODEL` → `SHIPPIE_MODEL` | `anthropic/claude-sonnet-4-6` |
 | Thinking level | `thinkingLevel` | `SHIPPIE_QA_THINKING_LEVEL` | `high` |
 | Target kind | `kind` | `SHIPPIE_QA_KIND` (`cli` to switch) | `web` |
 | Target under test | `target` | `SHIPPIE_QA_TARGET` | none (web: boot a dev server; cli: detect/build) |
@@ -191,15 +193,13 @@ Resolved by `resolveQaConfig` (`src/qa/config.ts`) from the workflow **payload**
 
 **External HTTPS:** `CDP_IGNORE_CERT_ERRORS=1` is set for both the agent's interactive browser and the `run_spec` test runs, so external HTTPS behind TLS-inspecting proxies / self-signed certs loads.
 
-**Retry tuning:** `PI_AI_RETRY_ATTEMPTS` (default 4) and `PI_AI_RETRY_BASE_MS` (default 500; `delay_i = base·3^i` + ≤250ms jitter → ~500/1500/4500/13500ms, a ~20s window). Disable entirely with `PI_AI_DISABLE_RETRY=1`. (Action inputs: `RETRY_ATTEMPTS` / `RETRY_BASE_MS`.)
-
 The GitHub Action also accepts the provider keys (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` / `CLOUDFLARE_API_KEY` + `CLOUDFLARE_ACCOUNT_ID`) and a required `GITHUB_TOKEN`.
 
 ---
 
 ## 7. Robustness
 
-- **pi-ai transient-retry patch** (`patches/@earendil-works+pi-ai+0.79.10.patch`, applied via `patch-package` postinstall): a transient HTTP status (408/409/429/5xx) is retried with exponential backoff + jitter instead of surfacing to the agent and aborting the run; auth/validation errors are never retried. Tunable via the env above. The Action **re-applies the patch and asserts it took** (`grep -q PI_AI_DISABLE_RETRY ... || exit 1`) so version drift or `--ignore-scripts` fails loudly rather than silently shipping the un-retried provider. pi-ai is exact-pinned so the patch keeps matching.
+- **pi-ai transient-retry patch — retired in the flue beta.9 migration.** It was pinned to `@earendil-works/pi-ai@0.79.10`; flue beta.9 requires `pi-ai@^0.80.2` (for its `./compat` subpath), so the 0.79.10 patch no longer applies and was removed along with the version override. Re-creating the env-tunable retry (`PI_AI_RETRY_ATTEMPTS` / `PI_AI_RETRY_BASE_MS`) against pi-ai 0.80.x — if 0.80.x does not already retry transient 5xx/429s natively — is a tracked follow-up.
 - **Boot-check** — `pr.yml` runs a CI boot-smoke (`node dist/server.mjs`) to catch the agent-discovery-at-boot class of failures (e.g. a subagent profile mistakenly placed in `src/agents/` that crashes the server at boot).
 - **Gates** — the QA features were each built through an orchestrated workflow (research → partitioned implement → verify) gated by the boot-check and the test/lint gates before commit. `qa-smoke.yml` is a throwaway CDP feasibility probe (launch headless Chrome, reach the CDP ws endpoint, drive one command) across ubuntu/windows/macos with no API key or repo access.
 - **Verify job** re-runs every committed test with plain `node` + system Chrome (no agent, no key) so a PR's checks independently prove the suite green — and on `--cross-os`, on three OSes.
@@ -214,4 +214,4 @@ The GitHub Action also accepts the provider keys (`ANTHROPIC_API_KEY` / `OPENAI_
 
 ---
 
-*Key source files: `src/agents/qa-lead.ts`; `src/qa/{config,instructions,driver,healer,pr,pr-policy,skill,exec,catalog,cli-client.mjs}.ts` (`driver.ts` is the single kind-aware driver profile — a `browser-driver` for web, a `cli-driver` for cli); `src/tools/{catalog-flows,run-spec,classify-finding,open-pull-request}.ts`; `src/workflows/qa.ts`; `bin/shippie.mjs` + `bin/templates.mjs` + `bin/templates/{review,qa,fanout}.yml` (the scaffolded Actions workflows live as real YAML templates); `qa/action.yml`; `.github/workflows/{qa-reusable,qa-smoke}.yml`; `src/skills/chrome-cdp/{SKILL.md,scripts/cdp.mjs,scripts/cdp-client.mjs,scripts/launch-chrome.sh}`; `Dockerfile`; `patches/@earendil-works+pi-ai+0.79.10.patch`. See also `docs/ambient-qa.md` (design log) and `docs/cross-repo-qa.md`.*
+*Key source files: `src/agents/qa-lead.ts`; `src/qa/{config,instructions,driver,healer,pr,pr-policy,skill,exec,catalog,cli-client.mjs}.ts` (`driver.ts` is the single kind-aware driver profile — a `browser-driver` for web, a `cli-driver` for cli); `src/tools/{catalog-flows,run-spec,classify-finding,open-pull-request}.ts`; `src/workflows/qa.ts`; `bin/shippie.mjs` + `bin/templates.mjs` + `bin/templates/{review,qa,fanout}.yml` (the scaffolded Actions workflows live as real YAML templates); `qa/action.yml`; `.github/workflows/{qa-reusable,qa-smoke}.yml`; `src/skills/chrome-cdp/{SKILL.md,scripts/cdp.mjs,scripts/cdp-client.mjs,scripts/launch-chrome.sh}`; `Dockerfile`. See also `docs/ambient-qa.md` (design log) and `docs/cross-repo-qa.md`.*

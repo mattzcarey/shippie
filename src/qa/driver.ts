@@ -3,9 +3,6 @@ import { createRunSpecTool } from '../tools/run-spec'
 import type { QaConfig } from './config'
 import { buildCliDriverInstructions, buildDriverInstructions } from './instructions'
 
-/** Cheap "hands" model for the per-flow drivers — judgment stays with the opus lead. */
-const DRIVER_MODEL = 'anthropic/claude-sonnet-4-6'
-
 /**
  * `driverProfile` — the SINGLE subagent PROFILE the lead fans out to, ONE per
  * catalogued flow/scenario. Its identity is chosen by `cfg.kind` (the lead delegates
@@ -58,7 +55,9 @@ export const driverProfile = (cfg: QaConfig): AgentProfile => {
 
   return defineAgentProfile({
     ...spec,
-    model: DRIVER_MODEL,
+    // Cheap "hands" tier by default; resolved centrally (src/common/models.ts) so it
+    // inherits SHIPPIE_MODEL/SHIPPIE_QA_MODEL and can be overridden per-run.
+    model: cfg.driverModel,
     thinkingLevel: 'medium',
     tools: [createRunSpecTool(cfg)],
   })

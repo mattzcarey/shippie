@@ -100,14 +100,14 @@ export const commentOnIssue = (ref: IssueRef) =>
     name: 'comment_on_github_issue',
     description:
       'Post your reply as a comment on the GitHub issue or pull request that mentioned you.',
-    parameters: v.object({
+    input: v.object({
       body: v.pipe(
         v.string(),
         v.minLength(1),
         v.description('The markdown comment to post.')
       ),
     }),
-    async execute({ body }) {
+    async run({ input: { body } }) {
       const res = await client.rest.issues.createComment({
         owner: ref.owner,
         repo: ref.repo,
@@ -124,8 +124,8 @@ export const getPullRequestDiff = (ref: IssueRef) =>
     name: 'get_pull_request_diff',
     description:
       'Fetch the unified diff of the pull request that mentioned you. Call this before reviewing a PR.',
-    parameters: v.object({}),
-    async execute() {
+    input: v.object({}),
+    async run() {
       const res = await client.rest.pulls.get({
         owner: ref.owner,
         repo: ref.repo,
