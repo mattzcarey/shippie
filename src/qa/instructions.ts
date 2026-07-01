@@ -397,10 +397,113 @@ ${rubric}`
  *
  * Branches on `cfg.kind`: 'web' (default) fans out browser-drivers over CDP and writes
  * .cdp.mjs tests; 'cli' fans out cli-drivers that run the target's CLI via bash and
- * write .cli.mjs tests. Heal/classify/tiered-PR structure is identical for both.
+ * write .cli.mjs tests. Only steps 1-3 (EXPLORE/CATALOG/FAN OUT) genuinely differ per
+ * kind; the tail (steps 4-8) is the shared verdict/tiered-PR contract (`buildKickoffTail`).
  */
 export const buildQaKickoff = (cfg: QaConfig): string =>
   cfg.kind === 'cli' ? buildQaKickoffCli(cfg) : buildQaKickoffWeb(cfg)
+
+/**
+ * The kind-specific vocabulary the shared kickoff tail (steps 4-8) is rendered with.
+ * The tail is the tiered-PR + verdict-JSON CONTRACT the lead, drivers, and healer all
+ * exchange — identical between web and cli modulo these words — so it lives in ONE
+ * place (`buildKickoffTail`) and cannot silently drift between the two kinds. Note the
+ * literal JSON keys (`"flow"`, `"flowsCatalogued"`) are the SAME in both kinds; `noun`
+ * only substitutes the English prose, never a key.
+ */
+interface KickoffVocab {
+  /** The unit of work in prose: 'flow' (web) | 'scenario' (cli). NEVER a JSON key. */
+  noun: string
+  /** Committed-test extension: e2e/tests/<slug>.{ext}.mjs — 'cdp' (web) | 'cli'. */
+  ext: string
+  /** What the healer fixes: 'app' (web) | 'target' (cli). */
+  appWord: string
+  /** The auto-included client clause opener, e.g. 'The driver (e2e/cdp-client.mjs)'. */
+  clientArtifact: string
+  /** Expands "the healer shares this workspace <...>" — the kind-specific note. */
+  healerShare: string
+  /** Step-5 last task-input bullet (the base URL for web; build+command for cli). */
+  taskInput: string
+}
+
+const WEB_VOCAB: KickoffVocab = {
+  noun: 'flow',
+  ext: 'cdp',
+  appWord: 'app',
+  clientArtifact: 'The driver (e2e/cdp-client.mjs)',
+  healerShare: '(chrome-cdp skill + cdp-client).',
+  taskInput: 'the base URL to test against.',
+}
+
+const CLI_VOCAB: KickoffVocab = {
+  noun: 'scenario',
+  ext: 'cli',
+  appWord: 'target',
+  clientArtifact: 'The client (e2e/cli-client.mjs)',
+  healerShare:
+    '(cli-client). The healer reproduces by running the CLI via `bash` (NO browser).',
+  taskInput: 'the exact command to run + how to build the target.',
+}
+
+/**
+ * Steps 4-8 of the kickoff — COLLECT verdicts → HEAL broken flows → CLASSIFY findings
+ * → OPEN tiered PR(s) → FINISH JSON. Shared by both kinds; only the `KickoffVocab`
+ * words change. The web rendering is byte-for-byte the historical web kickoff tail.
+ */
+const buildKickoffTail = (v: KickoffVocab): string =>
+  `4. COLLECT. Each driver returns JSON like
+   {"flow": "<slug>", "status": "pass" | "broken" | "flaky", "specPath": "e2e/tests/<slug>.${v.ext}.mjs",
+    "summary": "..."}. Read every verdict. If a verdict looks suspect you MAY re-run its spec with
+   \`run_spec\` yourself to confirm. A ${v.noun} counts as covered only if its driver returned status "pass".
+
+5. HEAL — one healer per BROKEN ${v.noun}. For EACH ${v.noun} whose verdict is "broken" (and, at your judgment, a
+   reproducibly "flaky" one), emit a \`task\` call with \`agent: "healer"\` whose \`prompt\` gives the healer
+   everything it needs to work alone:
+   - the ${v.noun} SLUG,
+   - the full spec for that ${v.noun} (paste the contents of its e2e/specs/<slug>.md),
+   - the driver's \`summary\` / fixHint describing what went wrong,
+   - ${v.taskInput}
+   Do NOT pass a \`cwd\` to \`task\` — the healer shares this workspace ${v.healerShare} Same
+   parallelism THROTTLE as the drivers: emit MULTIPLE healer \`task\` calls in a SINGLE turn but cap it at
+   <=3 per turn. Each healer attempts a minimal source fix, writes a failing→passing regression test
+   verified green with run_spec, and returns a heal verdict:
+   {"flow": "<slug>", "fixed": true|false, "specPath": "e2e/tests/<slug>.${v.ext}.mjs",
+    "changedPaths": ["<${v.appWord} file>", ...], "severity": "blocker"|"high"|"medium"|"low", "diagnosis": "..."}.
+   (If no ${v.noun} came back broken, skip this step.)
+
+6. CLASSIFY — call \`classify_finding\` for EVERY finding to get its accepted tier. Findings are:
+   - each green ${v.noun} → tier "missing-coverage" (the new spec is the finding),
+   - each broken ${v.noun} you healed or attempted → tier "broken-flow" (use the healer's \`severity\`),
+   - any refactor opportunity you want to raise → tier "refactor-hint" (off by default: only raise one with
+     \`pressingNeed: true\` AND severity blocker/high, knowing the tool will REJECT it otherwise).
+   Only proceed to a PR for a finding where \`classify_finding\` returned \`accepted: true\`.
+
+7. OPEN PRs — one per accepted tier:
+   - missing-coverage PR (skip if no ${v.noun} passed): call \`open_pull_request\` with tier "missing-coverage",
+     a clear title, a body (each covered ${v.noun} + what it asserts, plus any ${v.noun} reported broken/flaky), and
+     \`paths\` = ALL green test files (e2e/tests/<slug>.${v.ext}.mjs for every passing ${v.noun}) + their spec docs
+     (e2e/specs/<slug>.md). ${v.clientArtifact} is auto-included so the suite runs standalone.
+   - broken-flow PR — ONE per healed/attempted broken ${v.noun} whose finding was accepted: call
+     \`open_pull_request\` with tier "broken-flow", \`flowSlug: "<slug>"\` (this dedups the PR per ${v.noun}), a
+     title that EMBEDS the slug (e.g. "[shippie-qa] fix broken ${v.noun}: <slug>"), a body with the diagnosis,
+     what the fix changes, the before→after, and — for fixed:false — a clear "needs human" callout, and
+     \`paths\` = the regression test (e2e/tests/<slug>.${v.ext}.mjs) + the healer's \`changedPaths\` (the ${v.appWord} fix
+     files) + the ${v.noun}'s spec doc (e2e/specs/<slug>.md).
+   - refactor-hint PR — ONLY if \`classify_finding\` accepted it (very high bar). Same call with tier
+     "refactor-hint".
+
+8. FINISH. End your turn with ONLY a JSON object (no prose, no code fences):
+   {"flowsCatalogued": <n>,
+    "results": [{"flow": "<slug>", "status": "pass"|"broken"|"flaky", "specPath": "e2e/tests/<slug>.${v.ext}.mjs",
+                 "summary": "<why>"}],
+    "passed": <true if any ${v.noun} passed>,
+    "broken": [{"flow": "<slug>", "reason": "<why>"}],
+    "healed": [{"flow": "<slug>", "fixed": true|false, "severity": "<sev>", "diagnosis": "<why>"}],
+    "prUrl": "<the missing-coverage PR url, or null>",
+    "prUrls": ["<every PR url opened this run>"],
+    "summary": "<one or two sentences>"}
+   Report any ${v.noun} found broken/flaky in "broken" with a concrete reason — do not silently drop it. Keep
+   "prUrl" as the missing-coverage PR for back-compat; "prUrls" carries all of them.`
 
 const buildQaKickoffWeb = (cfg: QaConfig): string => {
   const baseUrl = cfg.target
@@ -433,59 +536,7 @@ poll its port until ready, and use that local URL as the base.`
    but cap it at <=3 \`task\` calls per turn to bound Chrome memory. If there are more than 3 flows, do them
    in successive batches of up to 3. (With exactly one flow this is simply one driver task.)
 
-4. COLLECT. Each driver returns JSON like
-   {"flow": "<slug>", "status": "pass" | "broken" | "flaky", "specPath": "e2e/tests/<slug>.cdp.mjs",
-    "summary": "..."}. Read every verdict. If a verdict looks suspect you MAY re-run its spec with
-   \`run_spec\` yourself to confirm. A flow counts as covered only if its driver returned status "pass".
-
-5. HEAL — one healer per BROKEN flow. For EACH flow whose verdict is "broken" (and, at your judgment, a
-   reproducibly "flaky" one), emit a \`task\` call with \`agent: "healer"\` whose \`prompt\` gives the healer
-   everything it needs to work alone:
-   - the flow SLUG,
-   - the full spec for that flow (paste the contents of its e2e/specs/<slug>.md),
-   - the driver's \`summary\` / fixHint describing what went wrong,
-   - the base URL to test against.
-   Do NOT pass a \`cwd\` to \`task\` — the healer shares this workspace (chrome-cdp skill + cdp-client). Same
-   parallelism THROTTLE as the drivers: emit MULTIPLE healer \`task\` calls in a SINGLE turn but cap it at
-   <=3 per turn. Each healer attempts a minimal source fix, writes a failing→passing regression test
-   verified green with run_spec, and returns a heal verdict:
-   {"flow": "<slug>", "fixed": true|false, "specPath": "e2e/tests/<slug>.cdp.mjs",
-    "changedPaths": ["<app file>", ...], "severity": "blocker"|"high"|"medium"|"low", "diagnosis": "..."}.
-   (If no flow came back broken, skip this step.)
-
-6. CLASSIFY — call \`classify_finding\` for EVERY finding to get its accepted tier. Findings are:
-   - each green flow → tier "missing-coverage" (the new spec is the finding),
-   - each broken flow you healed or attempted → tier "broken-flow" (use the healer's \`severity\`),
-   - any refactor opportunity you want to raise → tier "refactor-hint" (off by default: only raise one with
-     \`pressingNeed: true\` AND severity blocker/high, knowing the tool will REJECT it otherwise).
-   Only proceed to a PR for a finding where \`classify_finding\` returned \`accepted: true\`.
-
-7. OPEN PRs — one per accepted tier:
-   - missing-coverage PR (skip if no flow passed): call \`open_pull_request\` with tier "missing-coverage",
-     a clear title, a body (each covered flow + what it asserts, plus any flow reported broken/flaky), and
-     \`paths\` = ALL green test files (e2e/tests/<slug>.cdp.mjs for every passing flow) + their spec docs
-     (e2e/specs/<slug>.md). The driver (e2e/cdp-client.mjs) is auto-included so the suite runs standalone.
-   - broken-flow PR — ONE per healed/attempted broken flow whose finding was accepted: call
-     \`open_pull_request\` with tier "broken-flow", \`flowSlug: "<slug>"\` (this dedups the PR per flow), a
-     title that EMBEDS the slug (e.g. "[shippie-qa] fix broken flow: <slug>"), a body with the diagnosis,
-     what the fix changes, the before→after, and — for fixed:false — a clear "needs human" callout, and
-     \`paths\` = the regression test (e2e/tests/<slug>.cdp.mjs) + the healer's \`changedPaths\` (the app fix
-     files) + the flow's spec doc (e2e/specs/<slug>.md).
-   - refactor-hint PR — ONLY if \`classify_finding\` accepted it (very high bar). Same call with tier
-     "refactor-hint".
-
-8. FINISH. End your turn with ONLY a JSON object (no prose, no code fences):
-   {"flowsCatalogued": <n>,
-    "results": [{"flow": "<slug>", "status": "pass"|"broken"|"flaky", "specPath": "e2e/tests/<slug>.cdp.mjs",
-                 "summary": "<why>"}],
-    "passed": <true if any flow passed>,
-    "broken": [{"flow": "<slug>", "reason": "<why>"}],
-    "healed": [{"flow": "<slug>", "fixed": true|false, "severity": "<sev>", "diagnosis": "<why>"}],
-    "prUrl": "<the missing-coverage PR url, or null>",
-    "prUrls": ["<every PR url opened this run>"],
-    "summary": "<one or two sentences>"}
-   Report any flow found broken/flaky in "broken" with a concrete reason — do not silently drop it. Keep
-   "prUrl" as the missing-coverage PR for back-compat; "prUrls" carries all of them.`
+${buildKickoffTail(WEB_VOCAB)}`
 }
 
 const buildQaKickoffCli = (cfg: QaConfig): string => {
@@ -522,58 +573,5 @@ skill, NO cdp-client.
    but cap it at <=3 \`task\` calls per turn. If there are more than 3 scenarios, do them in successive
    batches of up to 3. (With exactly one scenario this is simply one driver task.)
 
-4. COLLECT. Each driver returns JSON like
-   {"flow": "<slug>", "status": "pass" | "broken" | "flaky", "specPath": "e2e/tests/<slug>.cli.mjs",
-    "summary": "..."}. Read every verdict. If a verdict looks suspect you MAY re-run its spec with
-   \`run_spec\` yourself to confirm. A scenario counts as covered only if its driver returned status "pass".
-
-5. HEAL — one healer per BROKEN scenario. For EACH scenario whose verdict is "broken" (and, at your
-   judgment, a reproducibly "flaky" one), emit a \`task\` call with \`agent: "healer"\` whose \`prompt\` gives
-   the healer everything it needs to work alone:
-   - the scenario SLUG,
-   - the full spec for that scenario (paste the contents of its e2e/specs/<slug>.md),
-   - the driver's \`summary\` / fixHint describing what went wrong,
-   - the exact command to run + how to build the target.
-   Do NOT pass a \`cwd\` to \`task\` — the healer shares this workspace (cli-client). The healer reproduces by
-   running the CLI via \`bash\` (NO browser). Same parallelism THROTTLE as the drivers: emit MULTIPLE healer
-   \`task\` calls in a SINGLE turn but cap it at <=3 per turn. Each healer attempts a minimal source fix,
-   writes a failing→passing regression test verified green with run_spec, and returns a heal verdict:
-   {"flow": "<slug>", "fixed": true|false, "specPath": "e2e/tests/<slug>.cli.mjs",
-    "changedPaths": ["<target file>", ...], "severity": "blocker"|"high"|"medium"|"low", "diagnosis": "..."}.
-   (If no scenario came back broken, skip this step.)
-
-6. CLASSIFY — call \`classify_finding\` for EVERY finding to get its accepted tier. Findings are:
-   - each green scenario → tier "missing-coverage" (the new spec is the finding),
-   - each broken scenario you healed or attempted → tier "broken-flow" (use the healer's \`severity\`),
-   - any refactor opportunity you want to raise → tier "refactor-hint" (off by default: only raise one with
-     \`pressingNeed: true\` AND severity blocker/high, knowing the tool will REJECT it otherwise).
-   Only proceed to a PR for a finding where \`classify_finding\` returned \`accepted: true\`.
-
-7. OPEN PRs — one per accepted tier:
-   - missing-coverage PR (skip if no scenario passed): call \`open_pull_request\` with tier
-     "missing-coverage", a clear title, a body (each covered scenario + what it asserts, plus any scenario
-     reported broken/flaky), and \`paths\` = ALL green test files (e2e/tests/<slug>.cli.mjs for every passing
-     scenario) + their spec docs (e2e/specs/<slug>.md). The client (e2e/cli-client.mjs) is auto-included so
-     the suite runs standalone.
-   - broken-flow PR — ONE per healed/attempted broken scenario whose finding was accepted: call
-     \`open_pull_request\` with tier "broken-flow", \`flowSlug: "<slug>"\` (this dedups the PR per scenario), a
-     title that EMBEDS the slug (e.g. "[shippie-qa] fix broken scenario: <slug>"), a body with the diagnosis,
-     what the fix changes, the before→after, and — for fixed:false — a clear "needs human" callout, and
-     \`paths\` = the regression test (e2e/tests/<slug>.cli.mjs) + the healer's \`changedPaths\` (the target fix
-     files) + the scenario's spec doc (e2e/specs/<slug>.md).
-   - refactor-hint PR — ONLY if \`classify_finding\` accepted it (very high bar). Same call with tier
-     "refactor-hint".
-
-8. FINISH. End your turn with ONLY a JSON object (no prose, no code fences):
-   {"flowsCatalogued": <n>,
-    "results": [{"flow": "<slug>", "status": "pass"|"broken"|"flaky", "specPath": "e2e/tests/<slug>.cli.mjs",
-                 "summary": "<why>"}],
-    "passed": <true if any scenario passed>,
-    "broken": [{"flow": "<slug>", "reason": "<why>"}],
-    "healed": [{"flow": "<slug>", "fixed": true|false, "severity": "<sev>", "diagnosis": "<why>"}],
-    "prUrl": "<the missing-coverage PR url, or null>",
-    "prUrls": ["<every PR url opened this run>"],
-    "summary": "<one or two sentences>"}
-   Report any scenario found broken/flaky in "broken" with a concrete reason — do not silently drop it. Keep
-   "prUrl" as the missing-coverage PR for back-compat; "prUrls" carries all of them.`
+${buildKickoffTail(CLI_VOCAB)}`
 }
