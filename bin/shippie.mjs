@@ -21,6 +21,11 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  renderFanoutWorkflow,
+  renderQaWorkflow,
+  renderReviewWorkflow,
+} from './templates.mjs'
 
 const pkgRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 
@@ -40,241 +45,6 @@ Usage:
 Set a model + provider key first, e.g.:
   export ANTHROPIC_API_KEY=...   # with SHIPPIE_MODEL=anthropic/claude-sonnet-4-6 (default)
 `
-
-const WORKFLOW_TEMPLATE = `name: Shippie 🚢
-
-on:
-  pull_request:
-
-permissions:
-  pull-requests: write
-  contents: read
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: mattzcarey/shippie@v0
-        with:
-          MODEL: anthropic/claude-sonnet-4-6
-          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-`
-
-// The "verify" job re-runs the committed CDP tests with plain node + system Chrome.
-// Default = ubuntu-only. With --cross-os it fans out to a 3-OS matrix (ubuntu +
-// windows + macos), installing Chrome + ffmpeg per-OS and uploading per-OS artifacts.
-const buildVerifyJob = (crossOs) => {
-  const runsOn = crossOs
-    ? `    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: \${{ matrix.os }}`
-    : `    runs-on: ubuntu-latest`
-
-  const ffmpeg = crossOs
-    ? `      # ffmpeg (screencast → mp4): per-OS package manager.
-      - name: Install ffmpeg (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Install ffmpeg (macOS)
-        if: runner.os == 'macOS'
-        run: brew install ffmpeg
-      - name: Install ffmpeg (Windows)
-        if: runner.os == 'Windows'
-        run: choco install ffmpeg -y --no-progress`
-    : `      - name: Install ffmpeg (screencast → mp4)
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg`
-
-  // On windows-latest the default shell is PowerShell; the array/nullglob/shopt
-  // script is bash-only, so pin shell: bash (Git Bash ships on the windows runner).
-  const testShell = crossOs ? `        shell: bash\n` : ``
-  const artifactName = crossOs ? `e2e-artifacts-\${{ matrix.os }}` : `e2e-artifacts`
-
-  return `  verify:
-    needs: author
-    if: needs.author.outputs.changed == 'true'
-${runsOn}
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: \${{ needs.author.outputs.branch }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - uses: browser-actions/setup-chrome@v1
-        id: chrome
-${ffmpeg}
-      - name: Run committed CDP e2e tests (node + Chrome; no deps)
-${testShell}        env:
-          E2E_BASE_URL: \${{ needs.author.outputs.base_url }}
-          CHROME_BIN: \${{ steps.chrome.outputs.chrome-path }}
-          CDP_IGNORE_CERT_ERRORS: "1"
-        run: |
-          shopt -s nullglob
-          tests=(e2e/tests/*.mjs)
-          if [ \${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.mjs found"; exit 1; fi
-          fail=0
-          for f in "\${tests[@]}"; do
-            echo "== $f =="
-            node "$f" || fail=1
-          done
-          exit $fail
-      - if: \${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${artifactName}
-          path: e2e/.artifacts/
-          retention-days: 30
-`
-}
-
-// Weekly + on-demand autonomous QA. The "author" job runs the agent (Linux, holds
-// the model key) and opens a PR; the "verify" job re-runs the committed CDP tests
-// (no agent, no key) so the PR's checks prove them green.
-const buildQaWorkflow = ({ crossOs } = {}) => `name: Shippie QA 🧪
-
-on:
-  schedule:
-    - cron: "0 6 * * 1" # Mondays 06:00 UTC
-  workflow_dispatch:
-    inputs:
-      target:
-        description: "URL/path to QA (sets E2E_BASE_URL)"
-        required: false
-      scope:
-        description: "Flows/areas to prioritize"
-        required: false
-      model:
-        description: "Flue model"
-        required: false
-        default: "anthropic/claude-opus-4-8"
-
-permissions:
-  contents: write
-  pull-requests: write
-
-concurrency:
-  group: shippie-qa
-  cancel-in-progress: false
-
-jobs:
-  author:
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    outputs:
-      branch: \${{ steps.qa.outputs.branch }}
-      changed: \${{ steps.qa.outputs.changed }}
-      base_url: \${{ steps.qa.outputs.base_url }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: qa
-        uses: mattzcarey/shippie/qa@v0
-        with:
-          MODEL: \${{ inputs.model || 'anthropic/claude-opus-4-8' }}
-          # On the weekly cron inputs.target is empty — set the SHIPPIE_QA_TARGET repo
-          # variable (Settings → Secrets and variables → Actions → Variables) to the URL
-          # to QA, or pass -f target=... on workflow_dispatch.
-          TARGET: \${{ inputs.target || vars.SHIPPIE_QA_TARGET }}
-          SCOPE: \${{ inputs.scope }}
-          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-
-${buildVerifyJob(crossOs)}`
-
-// Cross-repo fan-out. Scaffolded into a *control* repo: on a schedule + on demand
-// it dispatches each TARGET repo's own .github/workflows/shippie-qa.yml. It never
-// pushes or opens PRs in the targets — each target runs under its OWN GITHUB_TOKEN.
-// The cross-repo credential is a GitHub App installation token (actions/create-
-// github-app-token@v1) scoped per-shard to a single repo with actions:write only,
-// because dispatching a workflow is all the "create a workflow dispatch event" REST
-// call needs. GITHUB_TOKEN is repo-scoped and CANNOT dispatch other repos.
-const buildFanoutWorkflow = (repos) => {
-  const matrix = (repos.length > 0 ? repos : []).map((r) => `          - ${r}`).join('\n')
-  const matrixBlock =
-    repos.length > 0
-      ? matrix
-      : `          # >>> Fill in the target repos (owner/repo), one per line. <<<
-          # Re-run: shippie qa fanout-init owner/repoA,owner/repoB
-          # - my-org/app-one
-          # - my-org/app-two`
-
-  return `name: Shippie QA — fan-out 🚢🧪
-
-# Runs Shippie QA across many repos you own from this single control repo.
-# Each target repo runs its OWN .github/workflows/shippie-qa.yml under its own
-# GITHUB_TOKEN — this workflow only DISPATCHES them (actions:write), it never
-# pushes or opens PRs in the targets.
-
-on:
-  schedule:
-    - cron: "0 6 * * 1" # Mondays 06:00 UTC
-  workflow_dispatch:
-    inputs:
-      target:
-        description: "Optional URL/path passed through to each repo's QA run (sets E2E_BASE_URL)"
-        required: false
-      scope:
-        description: "Optional flows/areas to prioritize, passed through to each repo"
-        required: false
-
-# This workflow itself needs NO write scope on the control repo: the cross-repo
-# credential is the App token minted below, not GITHUB_TOKEN.
-permissions:
-  contents: read
-
-concurrency:
-  group: shippie-qa-fanout
-  cancel-in-progress: false
-
-jobs:
-  dispatch:
-    runs-on: ubuntu-latest
-    strategy:
-      # Don't let one un-installed / mis-scaffolded repo abort the rest.
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        repo:
-${matrixBlock}
-    steps:
-      - name: Mint an App installation token scoped to this target (actions:write only)
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: \${{ vars.QA_APP_ID }}
-          private-key: \${{ secrets.QA_APP_PRIVATE_KEY }}
-          # owner is required when "repositories" names a repo outside this control repo.
-          owner: \${{ github.repository_owner }}
-          repositories: \${{ matrix.repo }}
-          # Least privilege: dispatching a workflow only needs actions:write.
-          # The TARGET's own run uses ITS OWN GITHUB_TOKEN to push specs + open the PR,
-          # so this token needs NO contents / pull-requests on the target.
-          permission-actions: write
-
-      - name: Dispatch shippie-qa.yml in \${{ matrix.repo }}
-        env:
-          GH_TOKEN: \${{ steps.app-token.outputs.token }}
-        run: |
-          extra=()
-          [ -n "\${{ inputs.target }}" ] && extra+=(-f "target=\${{ inputs.target }}")
-          [ -n "\${{ inputs.scope }}" ]  && extra+=(-f "scope=\${{ inputs.scope }}")
-          gh workflow run shippie-qa.yml \\
-            --repo "\${{ matrix.repo }}" \\
-            --ref  "$(gh repo view "\${{ matrix.repo }}" --json defaultBranchRef -q .defaultBranchRef.name)" \\
-            "\${extra[@]}"
-          echo "Dispatched shippie-qa.yml in \${{ matrix.repo }}"
-`
-}
 
 const writeIfAbsent = (path, content, label) => {
   if (existsSync(path)) {
@@ -311,7 +81,7 @@ if (command === 'init' || command === 'configure') {
     process.exit(1)
   }
   mkdirSync(dirname(workflowPath), { recursive: true })
-  writeFileSync(workflowPath, WORKFLOW_TEMPLATE)
+  writeFileSync(workflowPath, renderReviewWorkflow())
   process.stdout.write(
     `Created ${relative(process.cwd(), workflowPath)}
 
@@ -338,7 +108,7 @@ if (command === 'qa' && sub === 'init') {
     process.exit(1)
   }
   mkdirSync(dirname(workflowPath), { recursive: true })
-  writeFileSync(workflowPath, buildQaWorkflow({ crossOs }))
+  writeFileSync(workflowPath, renderQaWorkflow({ crossOs }))
   process.stdout.write(`Created ${relative(process.cwd(), workflowPath)}\n`)
   if (crossOs) {
     process.stdout.write(
@@ -394,7 +164,7 @@ if (command === 'qa' && sub === 'fanout-init') {
     process.exit(1)
   }
   mkdirSync(dirname(workflowPath), { recursive: true })
-  writeFileSync(workflowPath, buildFanoutWorkflow(repos))
+  writeFileSync(workflowPath, renderFanoutWorkflow(repos))
   process.stdout.write(
     `Created ${relative(process.cwd(), workflowPath)}` +
       (repos.length > 0

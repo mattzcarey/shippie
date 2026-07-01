@@ -1,0 +1,88 @@
+name: Shippie QA 🧪
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "URL/path to QA (sets E2E_BASE_URL)"
+        required: false
+      scope:
+        description: "Flows/areas to prioritize"
+        required: false
+      model:
+        description: "Flue model"
+        required: false
+        default: "anthropic/claude-opus-4-8"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: shippie-qa
+  cancel-in-progress: false
+
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      branch: ${{ steps.qa.outputs.branch }}
+      changed: ${{ steps.qa.outputs.changed }}
+      base_url: ${{ steps.qa.outputs.base_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: qa
+        uses: mattzcarey/shippie/qa@v0
+        with:
+          MODEL: ${{ inputs.model || 'anthropic/claude-opus-4-8' }}
+          # On the weekly cron inputs.target is empty — set the SHIPPIE_QA_TARGET repo
+          # variable (Settings → Secrets and variables → Actions → Variables) to the URL
+          # to QA, or pass -f target=... on workflow_dispatch.
+          TARGET: ${{ inputs.target || vars.SHIPPIE_QA_TARGET }}
+          SCOPE: ${{ inputs.scope }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  verify:
+    needs: author
+    if: needs.author.outputs.changed == 'true'
+{{RUNS_ON}}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.author.outputs.branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+{{FFMPEG}}
+      - name: Run committed CDP e2e tests (node + Chrome; no deps)
+{{TEST_SHELL}}        env:
+          E2E_BASE_URL: ${{ needs.author.outputs.base_url }}
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          CDP_IGNORE_CERT_ERRORS: "1"
+        run: |
+          shopt -s nullglob
+          tests=(e2e/tests/*.mjs)
+          if [ ${#tests[@]} -eq 0 ]; then echo "No e2e/tests/*.mjs found"; exit 1; fi
+          fail=0
+          for f in "${tests[@]}"; do
+            echo "== $f =="
+            node "$f" || fail=1
+          done
+          exit $fail
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: {{ARTIFACT_NAME}}
+          path: e2e/.artifacts/
+          retention-days: 30

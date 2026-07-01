@@ -1,0 +1,65 @@
+name: Shippie QA — fan-out 🚢🧪
+
+# Runs Shippie QA across many repos you own from this single control repo.
+# Each target repo runs its OWN .github/workflows/shippie-qa.yml under its own
+# GITHUB_TOKEN — this workflow only DISPATCHES them (actions:write), it never
+# pushes or opens PRs in the targets.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Optional URL/path passed through to each repo's QA run (sets E2E_BASE_URL)"
+        required: false
+      scope:
+        description: "Optional flows/areas to prioritize, passed through to each repo"
+        required: false
+
+# This workflow itself needs NO write scope on the control repo: the cross-repo
+# credential is the App token minted below, not GITHUB_TOKEN.
+permissions:
+  contents: read
+
+concurrency:
+  group: shippie-qa-fanout
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't let one un-installed / mis-scaffolded repo abort the rest.
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        repo:
+{{MATRIX}}
+    steps:
+      - name: Mint an App installation token scoped to this target (actions:write only)
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.QA_APP_ID }}
+          private-key: ${{ secrets.QA_APP_PRIVATE_KEY }}
+          # owner is required when "repositories" names a repo outside this control repo.
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ matrix.repo }}
+          # Least privilege: dispatching a workflow only needs actions:write.
+          # The TARGET's own run uses ITS OWN GITHUB_TOKEN to push specs + open the PR,
+          # so this token needs NO contents / pull-requests on the target.
+          permission-actions: write
+
+      - name: Dispatch shippie-qa.yml in ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          extra=()
+          [ -n "${{ inputs.target }}" ] && extra+=(-f "target=${{ inputs.target }}")
+          [ -n "${{ inputs.scope }}" ]  && extra+=(-f "scope=${{ inputs.scope }}")
+          gh workflow run shippie-qa.yml \
+            --repo "${{ matrix.repo }}" \
+            --ref  "$(gh repo view "${{ matrix.repo }}" --json defaultBranchRef -q .defaultBranchRef.name)" \
+            "${extra[@]}"
+          echo "Dispatched shippie-qa.yml in ${{ matrix.repo }}"
