@@ -1,8 +1,7 @@
 import { createAgent } from '@flue/runtime'
 import { local } from '@flue/runtime/node'
-import { browserDriverProfile } from '../qa/browser-driver'
-import { cliDriverProfile } from '../qa/cli-driver'
 import { type QaPayload, resolveQaConfig } from '../qa/config'
+import { driverProfile } from '../qa/driver'
 import { healerProfile } from '../qa/healer'
 import { buildQaInstructions } from '../qa/instructions'
 import { createCatalogFlowsTool } from '../tools/catalog-flows'
@@ -44,16 +43,13 @@ export default createAgent<QaPayload>(async ({ payload, env }) => {
       createClassifyFindingTool(cfg),
       createOpenPrTool(cfg),
     ],
-    // The subagents the lead fans out to via `task` — all depth-1 siblings. Which
-    // driver the lead delegates to is chosen by cfg.kind in the kind-branched
-    // instructions/kickoff: browser-driver for kind 'web' (its own headless Chrome,
-    // writes + verifies a .cdp.mjs spec), cli-driver for kind 'cli' (runs the target
-    // CLI via bash, writes + verifies a .cli.mjs spec), and healer for one per broken
-    // flow (minimal source fix + failing→passing regression test, also kind-aware).
-    // Both drivers are always declared (cheap, and avoids a second createAgent config
-    // path); each carries its own instructions + run_spec tool. chrome-cdp auto-
-    // discovers from the shared cwd for web; cli-driver needs no skill (bash is its tool).
-    subagents: [browserDriverProfile(cfg), healerProfile(cfg), cliDriverProfile(cfg)],
+    // The subagents the lead fans out to via `task` — depth-1 siblings. `driverProfile`
+    // resolves cfg.kind to the ONE matching driver: browser-driver for kind 'web' (its
+    // own headless Chrome, writes + verifies a .cdp.mjs spec) or cli-driver for kind
+    // 'cli' (runs the target CLI via bash, writes + verifies a .cli.mjs spec) — the
+    // kind-branched instructions/kickoff address it by that same name. healer is one
+    // per broken flow (minimal source fix + failing→passing regression test, kind-aware).
+    subagents: [driverProfile(cfg), healerProfile(cfg)],
     compaction: { keepRecentTokens: 6000 }, // screenshots are heavy in context
     // Size BELOW the GitHub Actions job ceiling (hosted runners cap at 6h).
     durability: { timeoutMs: 75 * 60_000 },

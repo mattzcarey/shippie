@@ -4,24 +4,25 @@ import type { QaConfig } from '../qa/config'
 import { listArtifacts, runShell } from '../qa/exec'
 
 /**
- * `run_spec` — run a generated CDP e2e test (a node script that imports
- * `../cdp-client.mjs`, drives the page, and asserts) and return pass/fail plus
- * artifact paths (screenshots, session.mp4). The test self-launches headless
- * Chrome via the client, so this is just `node <test>`. Use after writing a test,
- * before declaring the flow done — only a green test is kept.
+ * `run_spec` — run a generated e2e test (a node script) and return pass/fail plus
+ * artifact paths (screenshots, session.mp4). Kind-agnostic: web tests import
+ * `../cdp-client.mjs` and self-launch headless Chrome; cli tests import
+ * `../cli-client.mjs` and drive the target CLI. Either way this is just
+ * `node <test>`. Use after writing a test, before declaring the flow done — only
+ * a green test is kept.
  */
 export const createRunSpecTool = (cfg: QaConfig) =>
   defineTool({
     name: 'run_spec',
     description:
-      'Run a generated CDP e2e test (a node script using ../cdp-client.mjs) and return pass/fail ' +
-      'plus artifact paths (screenshots, session.mp4). Exit code 0 = pass. Use after writing a test, ' +
-      'before declaring the flow done.',
+      'Run a generated e2e test (a node script: web → ../cdp-client.mjs, cli → ../cli-client.mjs) and ' +
+      'return pass/fail plus artifact paths (screenshots, session.mp4). Exit code 0 = pass. Use after ' +
+      'writing a test, before declaring the flow done.',
     parameters: v.object({
       specPath: v.pipe(
         v.string(),
         v.minLength(1),
-        v.description('Path to the .cdp.mjs test, relative to repo root')
+        v.description('Path to the .cdp.mjs or .cli.mjs test, relative to repo root')
       ),
       baseUrl: v.optional(
         v.pipe(
@@ -40,6 +41,9 @@ export const createRunSpecTool = (cfg: QaConfig) =>
       const env: Record<string, string | undefined> = {
         CHROME_BIN: cfg.chromeBin,
         E2E_ARTIFACTS_DIR: 'e2e/.artifacts',
+        // cli tests resolve paths relative to E2E_CWD (the target checkout); harmless
+        // for web tests, which ignore it. Keeps run_spec correct when workspace !== cwd.
+        E2E_CWD: cfg.workspace,
         // QA tolerates self-signed / corporate-proxy certs on external HTTPS targets.
         CDP_IGNORE_CERT_ERRORS: '1',
       }

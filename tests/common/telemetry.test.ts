@@ -9,7 +9,6 @@ const baseInput = (overrides: Partial<TelemetryInput> = {}): TelemetryInput => (
   repoSeed: 'owner/repo',
   platform: 'github',
   model: 'anthropic/claude-sonnet-4-6',
-  reviewed: 3,
   ...overrides,
 })
 
@@ -32,13 +31,13 @@ describe('sendReviewStarted', () => {
   })
 
   it('does not call fetch when telemetry is disabled', async () => {
-    sendReviewStarted(baseInput({ enabled: false }))
+    sendReviewStarted(baseInput({ enabled: false }), 3)
     await tick()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('POSTs a review_started event to the telemetry endpoint when enabled', async () => {
-    sendReviewStarted(baseInput())
+    sendReviewStarted(baseInput(), 3)
     await tick()
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -55,7 +54,7 @@ describe('sendReviewStarted', () => {
 
   it('anonymizes the repo seed (sha256 hex, never the raw seed)', async () => {
     const repoSeed = 'owner/secret-repo'
-    sendReviewStarted(baseInput({ repoSeed }))
+    sendReviewStarted(baseInput({ repoSeed }), 3)
     await tick()
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
@@ -67,9 +66,9 @@ describe('sendReviewStarted', () => {
   })
 
   it('derives distinct ids for distinct seeds and a stable id for the same seed', async () => {
-    sendReviewStarted(baseInput({ repoSeed: 'seed-a' }))
-    sendReviewStarted(baseInput({ repoSeed: 'seed-b' }))
-    sendReviewStarted(baseInput({ repoSeed: 'seed-a' }))
+    sendReviewStarted(baseInput({ repoSeed: 'seed-a' }), 3)
+    sendReviewStarted(baseInput({ repoSeed: 'seed-b' }), 3)
+    sendReviewStarted(baseInput({ repoSeed: 'seed-a' }), 3)
     await tick()
 
     expect(fetchMock).toHaveBeenCalledTimes(3)
@@ -80,7 +79,7 @@ describe('sendReviewStarted', () => {
 
   it('does not throw when fetch rejects (fire-and-forget)', async () => {
     fetchMock.mockRejectedValue(new Error('network down'))
-    expect(() => sendReviewStarted(baseInput())).not.toThrow()
+    expect(() => sendReviewStarted(baseInput(), 3)).not.toThrow()
     // Allow the rejected promise + .catch handler to settle without unhandled rejection.
     await tick()
     expect(fetchMock).toHaveBeenCalledTimes(1)

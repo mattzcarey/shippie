@@ -9,27 +9,30 @@ export interface TelemetryInput {
   repoSeed: string
   platform: string
   model: string
-  reviewed: number
 }
 
 const anonId = (seed: string): string =>
   createHash('sha256').update(seed).digest('hex').slice(0, 32)
 
 /**
- * Fire-and-forget anonymous "review_started" event. Never throws and never
- * blocks the review; aborts after 3s. No code or file contents are sent — only
- * an anonymized repo id, the platform, the model, and host info.
+ * Fire-and-forget anonymous event. Never throws and never blocks; aborts after
+ * 3s. No code or file contents are sent — only an anonymized repo id, the
+ * platform, the model, host info, and any event-specific `extra` fields.
  */
-export const sendReviewStarted = (input: TelemetryInput): void => {
+const sendEvent = (
+  eventType: string,
+  input: TelemetryInput,
+  extra: Record<string, unknown> = {}
+): void => {
   if (!input.enabled) return
 
   const event = {
-    event_type: 'review_started',
+    event_type: eventType,
     run_id: randomUUID(),
     repo_id: anonId(input.repoSeed),
     platform: input.platform,
     model: input.model,
-    reviewed: input.reviewed,
+    ...extra,
     system: {
       platform: process.platform,
       arch: process.arch,
@@ -46,40 +49,10 @@ export const sendReviewStarted = (input: TelemetryInput): void => {
   }).catch(() => {})
 }
 
-/** Anonymous, opt-out telemetry for the QA agent (no `reviewed` count). */
-export interface QaTelemetryInput {
-  enabled: boolean
-  repoSeed: string
-  platform: string
-  model: string
-}
+/** Fire-and-forget anonymous "review_started" event (with the reviewed-file count). */
+export const sendReviewStarted = (input: TelemetryInput, reviewed: number): void =>
+  sendEvent('review_started', input, { reviewed })
 
-/**
- * Fire-and-forget anonymous "qa_started" event. Mirrors sendReviewStarted: never
- * throws, never blocks, aborts after 3s, and sends no code or file contents —
- * only an anonymized repo id, the platform, the model, and host info.
- */
-export const sendQaStarted = (input: QaTelemetryInput): void => {
-  if (!input.enabled) return
-
-  const event = {
-    event_type: 'qa_started',
-    run_id: randomUUID(),
-    repo_id: anonId(input.repoSeed),
-    platform: input.platform,
-    model: input.model,
-    system: {
-      platform: process.platform,
-      arch: process.arch,
-      node_version: process.version,
-      shippie_version: process.env.npm_package_version ?? 'unknown',
-    },
-  }
-
-  void fetch(TELEMETRY_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(event),
-    signal: AbortSignal.timeout(3000),
-  }).catch(() => {})
-}
+/** Fire-and-forget anonymous "qa_started" event. */
+export const sendQaStarted = (input: TelemetryInput): void =>
+  sendEvent('qa_started', input)
