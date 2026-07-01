@@ -55,9 +55,12 @@ describe('reviewer agent', () => {
   })
 
   it('initializes to a config with model, suggest_change tool, and injected AGENTS.md', async () => {
+    // flue beta.9: the initializer receives only { id, env } (no payload). The agent
+    // resolves the workspace from env (GITHUB_WORKSPACE), so the injected AGENTS.md is
+    // read from the temp workspace.
     const cfg = await reviewer.initialize({
-      payload: { platform: 'local', workspace },
-      env: {},
+      id: 'test-review',
+      env: { GITHUB_WORKSPACE: workspace },
     })
 
     expect(typeof cfg.model).toBe('string')

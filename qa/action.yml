@@ -24,12 +24,6 @@ inputs:
   VIEWPORT:
     description: "Browser size for web targets: 1280x900 | 375x812@2 | mobile | tablet | desktop"
     required: false
-  RETRY_ATTEMPTS:
-    description: "pi-ai transient-retry attempts after the first try (PI_AI_RETRY_ATTEMPTS, default 4)"
-    required: false
-  RETRY_BASE_MS:
-    description: "pi-ai retry exponential backoff base ms (PI_AI_RETRY_BASE_MS, default 500); delay_i = base*3^i"
-    required: false
   TELEMETRY:
     description: "Send anonymous usage telemetry. Set to 'false' to opt out."
     required: false
@@ -77,15 +71,9 @@ runs:
       # The flue project root is the shippie checkout root = parent of this action dir
       # (this action lives at <root>/qa). --include=dev so @flue/cli (a devDep, needed
       # by `npx flue run qa`) is present even under NODE_ENV=production.
-      # The package's "postinstall": "patch-package" applies patches/ here (pi-ai transient
-      # retry); we re-run + assert it took, so version drift / --ignore-scripts fails loudly
-      # instead of silently shipping the un-retried provider.
       run: |
         ROOT="$(dirname "$GITHUB_ACTION_PATH")"
         npm install --prefix "$ROOT" --include=dev --no-audit --no-fund --loglevel=error
-        npx --prefix "$ROOT" --yes patch-package --patch-dir "$ROOT/patches"
-        grep -q "PI_AI_DISABLE_RETRY" "$ROOT/node_modules/@earendil-works/pi-ai/dist/stream.js" \
-          || { echo "pi-ai transient-retry patch not applied (version drift?) — check patches/" >&2; exit 1; }
 
     - name: Run Shippie QA 🧪
       id: qa
@@ -106,8 +94,6 @@ runs:
         SHIPPIE_TELEMETRY: ${{ inputs.TELEMETRY }}
         CHROME_BIN: ${{ inputs.CHROME_BIN }}
         SHIPPIE_QA_VIEWPORT: ${{ inputs.VIEWPORT }}
-        PI_AI_RETRY_ATTEMPTS: ${{ inputs.RETRY_ATTEMPTS }}
-        PI_AI_RETRY_BASE_MS: ${{ inputs.RETRY_BASE_MS }}
       run: |
         ROOT="$(dirname "$GITHUB_ACTION_PATH")"
         npx flue run qa \

@@ -1,6 +1,7 @@
 import { createAgent } from '@flue/runtime'
 import { local } from '@flue/runtime/node'
-import { type QaPayload, resolveQaConfig } from '../qa/config'
+import { connectMcpServers } from '../mcp/connect'
+import { resolveQaConfig } from '../qa/config'
 import { driverProfile } from '../qa/driver'
 import { healerProfile } from '../qa/healer'
 import { buildQaInstructions } from '../qa/instructions'
@@ -22,8 +23,14 @@ import { createRunSpecTool } from '../tools/run-spec'
  * PR only when the classifier accepts it. With a single catalogued flow this degrades
  * to one driver task (and one heal task if it is broken). See docs/ambient-qa.md §3.
  */
-export default createAgent<QaPayload>(async ({ payload, env }) => {
-  const cfg = resolveQaConfig(payload, env as NodeJS.ProcessEnv)
+export default createAgent(async ({ env }) => {
+  // flue beta.9 gives the initializer only `{ id, env }` (no per-invocation payload),
+  // so config resolves from the environment (the vars the Action/CLI already set); the
+  // workflow passes the actual kickoff (target/scope/kind) via the prompt text.
+  const cfg = resolveQaConfig(undefined, env as NodeJS.ProcessEnv)
+  // MCP tools are optional (empty unless SHIPPIE_MCP_SERVERS is set); connected here
+  // per init, torn down by process exit (QA is one-shot).
+  const mcp = await connectMcpServers(cfg.mcpServers)
 
   return {
     model: cfg.model, // default anthropic/claude-opus-4-8
@@ -42,6 +49,7 @@ export default createAgent<QaPayload>(async ({ payload, env }) => {
       createRunSpecTool(cfg),
       createClassifyFindingTool(cfg),
       createOpenPrTool(cfg),
+      ...mcp.tools,
     ],
     // The subagents the lead fans out to via `task` — depth-1 siblings. `driverProfile`
     // resolves cfg.kind to the ONE matching driver: browser-driver for kind 'web' (its

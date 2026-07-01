@@ -1,89 +1,88 @@
 {
-    "name": "shippie",
-    "version": "0.21.2",
-    "description": "an extensible code review agent",
-    "type": "module",
-    "main": "./dist/server.mjs",
-    "bin": {
-        "shippie": "./bin/shippie.mjs"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/mattzcarey/shippie"
-    },
-    "workspaces": [
-        "apps/*"
-    ],
-    "scripts": {
-        "postinstall": "patch-package",
-        "review": "flue run review --target node",
-        "qa": "flue run qa --target node",
-        "dev": "flue dev --target node",
-        "build": "flue build --target node",
-        "start": "node dist/server.mjs",
-        "prepublishOnly": "flue build --target node",
-        "release": "npm run build && changeset publish",
-        "version": "changeset version",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "check": "oxlint && oxfmt --check",
-        "check:types": "tsc --noEmit",
-        "check:fix": "oxlint --fix && oxfmt",
-        "check:fix:unsafe": "oxlint --fix-dangerously && oxfmt"
-    },
-    "keywords": [
-        "code-review",
-        "shippie",
-        "review",
-        "model-context-protocol",
-        "mcp",
-        "chatgpt",
-        "gpt",
-        "openai",
-        "anthropic",
-        "sonnet 4",
-        "claude code",
-        "grok",
-        "perplexity",
-        "gpt-4.1",
-        "huggingface",
-        "ai",
-        "genai",
-        "sonnet"
-    ],
-    "author": "Matt Carey",
-    "license": "MIT",
-    "engines": {
-        "node": ">=22.19.0"
-    },
-    "dependencies": {
-        "@flue/github": "1.0.0-beta.1",
-        "@flue/runtime": "1.0.0-beta.1",
-        "octokit": "^3.1.0",
-        "picomatch": "^4.0.2",
-        "valibot": "^1.4.1"
-    },
-    "devDependencies": {
-        "@changesets/changelog-github": "^0.7.0",
-        "@changesets/cli": "^2.31.0",
-        "@flue/cli": "1.0.0-beta.1",
-        "@types/node": "^22.10.0",
-        "@types/picomatch": "^4.0.0",
-        "oxfmt": "^0.56.0",
-        "oxlint": "^1.71.0",
-        "patch-package": "^8.0.1",
-        "typescript": "^5.1.6",
-        "vitest": "^3.2.4"
-    },
-    "overrides": {
-        "hono": "^4.12.26",
-        "esbuild": "^0.28.1",
-        "@earendil-works/pi-ai": "0.79.10"
-    },
-    "files": [
-        "dist",
-        "bin",
-        "src/skills",
-        "src/qa/cli-client.mjs"
-    ]
+  "name": "shippie",
+  "version": "0.21.2",
+  "description": "an extensible code review agent",
+  "type": "module",
+  "main": "./dist/server.mjs",
+  "bin": {
+    "shippie": "./bin/shippie.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattzcarey/shippie"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "postinstall": "patch-package",
+    "review": "flue run review --target node",
+    "qa": "flue run qa --target node",
+    "dev": "flue dev --target node",
+    "build": "flue build --target node",
+    "start": "node dist/server.mjs",
+    "prepublishOnly": "flue build --target node",
+    "release": "npm run build && changeset publish",
+    "version": "changeset version",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "oxlint && oxfmt --check",
+    "check:types": "tsc --noEmit",
+    "check:fix": "oxlint --fix && oxfmt",
+    "check:fix:unsafe": "oxlint --fix-dangerously && oxfmt"
+  },
+  "keywords": [
+    "code-review",
+    "shippie",
+    "review",
+    "model-context-protocol",
+    "mcp",
+    "chatgpt",
+    "gpt",
+    "openai",
+    "anthropic",
+    "sonnet 4",
+    "claude code",
+    "grok",
+    "perplexity",
+    "gpt-4.1",
+    "huggingface",
+    "ai",
+    "genai",
+    "sonnet"
+  ],
+  "author": "Matt Carey",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {
+    "@flue/github": "1.0.0-beta.1",
+    "@flue/runtime": "1.0.0-beta.9",
+    "octokit": "^3.1.0",
+    "picomatch": "^4.0.2",
+    "valibot": "^1.4.1"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
+    "@flue/cli": "1.0.0-beta.9",
+    "@types/node": "^22.10.0",
+    "@types/picomatch": "^4.0.0",
+    "oxfmt": "^0.56.0",
+    "oxlint": "^1.71.0",
+    "patch-package": "^8.0.1",
+    "typescript": "^5.1.6",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "hono": "^4.12.26",
+    "esbuild": "^0.28.1"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "src/skills",
+    "src/qa/cli-client.mjs"
+  ]
 }

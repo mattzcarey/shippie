@@ -18,7 +18,7 @@ export const createRunSpecTool = (cfg: QaConfig) =>
       'Run a generated e2e test (a node script: web → ../cdp-client.mjs, cli → ../cli-client.mjs) and ' +
       'return pass/fail plus artifact paths (screenshots, session.mp4). Exit code 0 = pass. Use after ' +
       'writing a test, before declaring the flow done.',
-    parameters: v.object({
+    input: v.object({
       specPath: v.pipe(
         v.string(),
         v.minLength(1),
@@ -34,7 +34,7 @@ export const createRunSpecTool = (cfg: QaConfig) =>
         )
       ),
     }),
-    execute: async ({ specPath, baseUrl }) => {
+    run: async ({ input: { specPath, baseUrl } }) => {
       const target = baseUrl ?? cfg.target
       // Only set E2E_BASE_URL when defined — an empty value would make relative goto()
       // navigate to an invalid URL (the client then fails fast with a clear message).

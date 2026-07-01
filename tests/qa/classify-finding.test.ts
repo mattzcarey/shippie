@@ -7,8 +7,8 @@ const cfg = resolveQaConfig({ platform: 'local', workspace: '/tmp/qa' }, {})
 const tool = createClassifyFindingTool(cfg)
 
 const run = (finding: Finding) =>
-  // The tool's execute returns the TierDecision as JSON.
-  (tool.execute as (args: Finding) => Promise<string>)(finding)
+  // The tool's run() returns the TierDecision as JSON.
+  (tool.run as (ctx: { input: Finding }) => Promise<string>)({ input: finding })
 
 describe('classify_finding tool', () => {
   const findings: Finding[] = [

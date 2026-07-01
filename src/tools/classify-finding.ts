@@ -26,7 +26,7 @@ export const createClassifyFindingTool = (_cfg: QaConfig) =>
       'missing-coverage = LOW bar (any green spec); refactor-hint = VERY HIGH bar — rejected unless ' +
       'pressingNeed=true AND severity is blocker/high. Returns {accepted, tier, reason}. Call this ' +
       'before open_pull_request for every finding; only open a PR for an accepted finding.',
-    parameters: v.object({
+    input: v.object({
       flowSlug: v.pipe(
         v.string(),
         v.description('The flow this finding concerns (kebab-case slug)')
@@ -41,5 +41,5 @@ export const createClassifyFindingTool = (_cfg: QaConfig) =>
         )
       ),
     }),
-    execute: async (finding) => JSON.stringify(decideTier(finding)),
+    run: async ({ input: finding }) => JSON.stringify(decideTier(finding)),
   })
