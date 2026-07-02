@@ -1,6 +1,6 @@
 {
   "name": "shippie",
-  "version": "0.21.2",
+  "version": "0.22.0",
   "description": "an extensible code review agent",
   "type": "module",
   "main": "./dist/server.mjs",
