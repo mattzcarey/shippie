@@ -11,9 +11,6 @@
     "type": "git",
     "url": "https://github.com/mattzcarey/shippie"
   },
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
     "postinstall": "patch-package",
     "review": "flue run review --target node",
