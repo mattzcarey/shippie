@@ -1,6 +1,6 @@
 {
   "name": "shippie",
-  "version": "0.21.2",
+  "version": "0.22.0",
   "description": "an extensible code review agent",
   "type": "module",
   "main": "./dist/server.mjs",
@@ -12,7 +12,8 @@
     "url": "https://github.com/mattzcarey/shippie"
   },
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "."
   ],
   "scripts": {
     "postinstall": "patch-package",
