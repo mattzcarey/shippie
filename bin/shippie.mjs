@@ -19,6 +19,7 @@
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { request } from 'node:http'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -258,14 +259,37 @@ const shutdown = () => {
   } catch {}
 }
 
+/**
+ * POST and wait for the response with NO client-side timeout. Deliberately
+ * node:http, not fetch: the built-in fetch (undici) enforces a ~300s idle timeout
+ * on headers/body, which killed any `?wait=result` workflow run that stayed quiet
+ * for >5 minutes ("fetch failed") — and a real QA run usually does.
+ */
+const postJson = (url, body) =>
+  new Promise((resolve, reject) => {
+    const req = request(
+      url,
+      { method: 'POST', headers: { 'content-type': 'application/json' } },
+      (res) => {
+        let text = ''
+        res.setEncoding('utf8')
+        res.on('data', (chunk) => {
+          text += chunk
+        })
+        res.on('end', () =>
+          resolve({ ok: (res.statusCode ?? 500) < 400, status: res.statusCode, text })
+        )
+        res.on('error', reject)
+      }
+    )
+    req.on('error', reject)
+    req.end(body)
+  })
+
 try {
   await waitForServer()
-  const res = await fetch(`${base}/workflows/${workflow}?wait=result`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: payload,
-  })
-  const text = await res.text()
+  const res = await postJson(`${base}/workflows/${workflow}?wait=result`, payload)
+  const text = res.text
   shutdown()
   try {
     const parsed = JSON.parse(text)
