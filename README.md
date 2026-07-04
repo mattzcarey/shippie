@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/mattzcarey-shippie-badge.png)](https://mseep.ai/app/mattzcarey-shippie)
+
 # Shippie 🚢 (formerly Code Review GPT)
 
 [![NPM][npm_badge]][npm]
