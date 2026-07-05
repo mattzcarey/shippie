@@ -68,6 +68,10 @@ describe('smoke: modules load without crashing when secrets are absent', () => {
   it('imports the mention agent without throwing', async () => {
     await expect(import('../src/agents/mention')).resolves.toBeDefined()
   })
+
+  it('imports common/litellm.ts without throwing (litellm key unset)', async () => {
+    await expect(import('../src/common/litellm')).resolves.toBeDefined()
+  })
 })
 
 describe('smoke: review workflow public surface', () => {

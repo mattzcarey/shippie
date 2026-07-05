@@ -23,6 +23,8 @@ All inputs are optional except `GITHUB_TOKEN`.
 | `CLOUDFLARE_API_KEY` | Cloudflare API token (for `cloudflare-workers-ai/<model>` or `cloudflare-ai-gateway/<model>`). | No | — |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID (required for the Cloudflare Workers AI / AI Gateway providers). | No | — |
 | `CLOUDFLARE_GATEWAY_ID` | Cloudflare AI Gateway ID (only for `cloudflare-ai-gateway/<model>`). | No | — |
+| `LITELLM_API_KEY` | LiteLLM proxy API key (for `litellm/<model>`). | No | — |
+| `LITELLM_BASE_URL` | LiteLLM proxy base URL. | No | `http://localhost:4000` |
 | `GITHUB_TOKEN` | GitHub token used to post review comments. | **Yes** | — |
 
 Provide the provider credential that matches your chosen `MODEL`. For example, the
