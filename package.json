@@ -73,7 +73,7 @@
     "vitest": "^3.2.4"
   },
   "overrides": {
-    "hono": "^4.12.26",
+    "hono": "^4.12.31",
     "esbuild": "^0.28.1"
   },
   "files": [
