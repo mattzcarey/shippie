@@ -63,7 +63,7 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "@flue/cli": "1.0.0-beta.9",
+    "@flue/cli": "2.0.2",
     "@types/node": "^22.10.0",
     "@types/picomatch": "^4.0.0",
     "oxfmt": "^0.56.0",
