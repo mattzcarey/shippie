@@ -139,7 +139,7 @@ Have a look at the [discussion tab](https://github.com/mattzcarey/shippie/discus
 
 ## Star History ⭐️
 
-[![Star History Chart](https://api.star-history.com/svg?repos=mattzcarey/shippie&type=Date)](https://star-history.com/#mattzcarey/shippie&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=mattzcarey/shippie&type=Date)](https://star-history.dera.page/#mattzcarey/shippie&Date)
 
 <!-- Badges -->
 
