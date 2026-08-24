@@ -16,6 +16,7 @@ All inputs are optional except `GITHUB_TOKEN`.
 | `THINKING_LEVEL` | Reasoning effort: `off` \| `minimal` \| `low` \| `medium` \| `high` \| `xhigh`. | No | `medium` |
 | `IGNORE` | Comma-separated glob patterns to skip, e.g. `**/*.test.ts,dist/**`. | No | — |
 | `CUSTOM_INSTRUCTIONS` | Extra instructions appended to the review prompt. | No | — |
+| `PARALLEL_SEARCH` | Enable the free, no-key hosted Parallel Search MCP server for the reviewer agent. | No | `false` |
 | `MCP_SERVERS` | JSON object of remote (HTTP/SSE) MCP servers to attach. See below. | No | — |
 | `ANTHROPIC_API_KEY` | Anthropic API key (for `anthropic/<model>`). | No | — |
 | `OPENAI_API_KEY` | OpenAI API key (for `openai/<model>`). | No | — |
@@ -27,6 +28,23 @@ All inputs are optional except `GITHUB_TOKEN`.
 
 Provide the provider credential that matches your chosen `MODEL`. For example, the
 default model (`anthropic/claude-sonnet-4-6`) needs `ANTHROPIC_API_KEY`.
+
+### `PARALLEL_SEARCH`
+
+Set `PARALLEL_SEARCH: true` to explicitly attach the hosted Streamable HTTP endpoint
+`https://search.parallel.ai/mcp` to the reviewer agent. It is disabled by default,
+requires no Parallel API key, and does not replace or modify any servers configured in
+`MCP_SERVERS`. If `MCP_SERVERS` already defines a server named `parallel`, that explicit
+configuration (including its URL and headers) is preserved instead.
+
+When enabled, the model can call the endpoint's tools. Search calls transmit the search
+objective and search queries supplied by the model. Extract calls transmit the requested
+public page URLs. Repository reads and other built-in review tools remain local.
+
+```yaml
+with:
+  PARALLEL_SEARCH: true
+```
 
 ### `MCP_SERVERS`
 

@@ -6,6 +6,26 @@ You can give the shippie agent access to a web browser, database, documentation,
 
 Shippie acts as an MCP client, like Cursor, Windsurf, VSCode and Claude.
 
+## Hosted Parallel Search (explicit opt-in)
+
+The reviewer agent can use Parallel's free, no-key hosted Streamable HTTP server. It is
+disabled by default. For the GitHub Action, opt in explicitly with:
+
+```yaml
+with:
+  PARALLEL_SEARCH: true
+```
+
+For other hosted or local runs, set `SHIPPIE_PARALLEL_SEARCH=true`. This registers
+`https://search.parallel.ai/mcp` as `parallel` without changing the existing server list,
+headers, or defaults. An explicit `parallel` entry in `MCP_SERVERS` /
+`SHIPPIE_MCP_SERVERS` takes precedence, preserving its custom URL and headers.
+
+When the option is enabled and the model invokes a Parallel tool, search requests send
+the model-provided search objective and search queries to the hosted endpoint. Extract
+requests send the public page URLs requested by the model. Repository reads and other
+built-in review tools remain local.
+
 ## How MCP servers are supplied
 
 MCP servers are configured as a JSON string, passed in one of two ways:

@@ -11,6 +11,7 @@ describe('resolveReviewConfig', () => {
     expect(cfg.thinkingLevel).toBe('medium')
     expect(cfg.reviewLanguage).toBe('English')
     expect(cfg.mcpServers).toEqual({})
+    expect(cfg.parallelSearch).toBe(false)
     expect(cfg.github).toBeUndefined()
   })
 
@@ -82,6 +83,19 @@ describe('resolveReviewConfig', () => {
   test('invalid MCP JSON falls back to empty', () => {
     const cfg = resolveReviewConfig(undefined, env({ SHIPPIE_MCP_SERVERS: 'not json' }))
     expect(cfg.mcpServers).toEqual({})
+  })
+
+  test('Parallel Search requires explicit opt-in', () => {
+    expect(
+      resolveReviewConfig(undefined, env({ SHIPPIE_PARALLEL_SEARCH: 'true' }))
+        .parallelSearch
+    ).toBe(true)
+    expect(
+      resolveReviewConfig(
+        { parallelSearch: false },
+        env({ SHIPPIE_PARALLEL_SEARCH: 'true' })
+      ).parallelSearch
+    ).toBe(false)
   })
 
   test('payload mcpServers wins over env', () => {

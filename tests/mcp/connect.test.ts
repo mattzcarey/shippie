@@ -30,6 +30,24 @@ describe('connectMcpServers', () => {
     await expect(result.close()).resolves.toBeUndefined()
   })
 
+  it('connects a hosted Streamable HTTP server without adding headers', async () => {
+    const close = vi.fn().mockResolvedValue(undefined)
+    connectMcpServer.mockResolvedValueOnce({
+      name: 'parallel',
+      tools: [tool('search')],
+      close,
+    })
+    const result = await connectMcpServers({
+      parallel: { url: 'https://search.parallel.ai/mcp', transport: 'streamable-http' },
+    })
+    expect(connectMcpServer).toHaveBeenCalledWith('parallel', {
+      url: 'https://search.parallel.ai/mcp',
+      transport: 'streamable-http',
+      headers: undefined,
+    })
+    expect(result.tools.map((t) => t.name)).toEqual(['search'])
+  })
+
   it('connects each server, aggregates flattened tools and closes every connection', async () => {
     const closeA = vi.fn().mockResolvedValue(undefined)
     const closeB = vi.fn().mockResolvedValue(undefined)

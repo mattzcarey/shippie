@@ -20,6 +20,10 @@ inputs:
   CUSTOM_INSTRUCTIONS:
     description: "Extra instructions appended to the review prompt"
     required: false
+  PARALLEL_SEARCH:
+    description: "Enable the free, no-key hosted Parallel Search MCP server"
+    required: false
+    default: "false"
   MCP_SERVERS:
     description: >-
       JSON object of remote MCP servers to attach, e.g.
@@ -99,6 +103,7 @@ runs:
         SHIPPIE_IGNORE: ${{ inputs.IGNORE }}
         SHIPPIE_CUSTOM_INSTRUCTIONS: ${{ inputs.CUSTOM_INSTRUCTIONS }}
         SHIPPIE_MCP_SERVERS: ${{ inputs.MCP_SERVERS }}
+        SHIPPIE_PARALLEL_SEARCH: ${{ inputs.PARALLEL_SEARCH }}
         SHIPPIE_TELEMETRY: ${{ inputs.TELEMETRY }}
       run: |
         npx flue run review \

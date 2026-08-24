@@ -23,7 +23,17 @@ export default createAgent(async ({ env }) => {
   // MCP tools are optional (empty unless SHIPPIE_MCP_SERVERS is configured). They
   // are connected here per init; the review is one-shot, so the process exit tears
   // the connections down.
-  const mcp = await connectMcpServers(cfg.mcpServers)
+  const mcp = await connectMcpServers({
+    ...(cfg.parallelSearch
+      ? {
+          parallel: {
+            url: 'https://search.parallel.ai/mcp',
+            transport: 'streamable-http' as const,
+          },
+        }
+      : {}),
+    ...cfg.mcpServers,
+  })
 
   return {
     model: cfg.model,

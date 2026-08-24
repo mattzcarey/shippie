@@ -34,6 +34,8 @@ export interface ReviewPayload {
   baseSha?: string
   headSha?: string
   mcpServers?: Record<string, McpServerInput>
+  /** Opt in to the hosted Parallel Search MCP server. Defaults to false. */
+  parallelSearch?: boolean
 }
 
 export interface GithubTarget {
@@ -56,6 +58,7 @@ export interface ReviewConfig {
   headSha?: string
   github?: GithubTarget
   mcpServers: Record<string, McpServerInput>
+  parallelSearch: boolean
 }
 
 const DEFAULT_THINKING: ThinkingLevel = 'medium'
@@ -110,6 +113,7 @@ export const resolveReviewConfig = (
       : undefined)
   const customInstructions = p.customInstructions ?? env.SHIPPIE_CUSTOM_INSTRUCTIONS
   const telemetry = p.telemetry ?? env.SHIPPIE_TELEMETRY !== 'false'
+  const parallelSearch = p.parallelSearch ?? env.SHIPPIE_PARALLEL_SEARCH === 'true'
 
   let github: GithubTarget | undefined
   if (platform === 'github') {
@@ -136,5 +140,6 @@ export const resolveReviewConfig = (
     headSha,
     github,
     mcpServers: parseMcpServers(p, env),
+    parallelSearch,
   }
 }

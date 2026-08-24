@@ -7,9 +7,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 // GITHUB_WEBHOOK_SECRET and constructs an Octokit client at module load. The
 // vi.hoisted block runs before the static imports below, so the env var is set
 // before the channel module is evaluated, and the Octokit mock is in place.
-const { mockClient } = vi.hoisted(() => {
+const { connectMcpServer, mockClient } = vi.hoisted(() => {
   process.env.GITHUB_WEBHOOK_SECRET = 'test-webhook-secret'
   return {
+    connectMcpServer: vi.fn(),
     mockClient: {
       rest: {
         issues: {
@@ -28,6 +29,10 @@ const { mockClient } = vi.hoisted(() => {
 
 // Never touch the real GitHub API.
 vi.mock('octokit', () => ({ Octokit: vi.fn(() => mockClient) }))
+vi.mock('@flue/runtime', async (orig) => ({
+  ...(await orig<typeof import('@flue/runtime')>()),
+  connectMcpServer,
+}))
 
 import { channel } from '../../src/channels/github'
 import mention from '../../src/agents/mention'
@@ -74,6 +79,50 @@ describe('reviewer agent', () => {
     // The root-level AGENTS.md must be injected into the system prompt.
     expect(cfg.instructions as string).toContain('SHIPPIE_MARKER_42')
     expect(cfg.instructions as string).toContain('AGENTS.md')
+  })
+
+  it('registers Parallel Search only after explicit opt-in', async () => {
+    connectMcpServer.mockResolvedValue({
+      name: 'parallel',
+      tools: [{ name: 'search' }],
+      close: vi.fn(),
+    })
+    const withoutParallel = await reviewer.initialize({
+      id: 'test-review-default',
+      env: { GITHUB_WORKSPACE: workspace },
+    })
+    expect(toolNames(withoutParallel.tools)).not.toContain('search')
+    expect(connectMcpServer).not.toHaveBeenCalled()
+
+    const withParallel = await reviewer.initialize({
+      id: 'test-review-parallel',
+      env: { GITHUB_WORKSPACE: workspace, SHIPPIE_PARALLEL_SEARCH: 'true' },
+    })
+    expect(toolNames(withParallel.tools)).toContain('search')
+    expect(connectMcpServer).toHaveBeenCalledWith('parallel', {
+      url: 'https://search.parallel.ai/mcp',
+      transport: 'streamable-http',
+      headers: undefined,
+    })
+  })
+
+  it('preserves an explicitly configured parallel server and its headers', async () => {
+    connectMcpServer.mockClear()
+    connectMcpServer.mockResolvedValue({ name: 'parallel', tools: [], close: vi.fn() })
+    const explicit = {
+      url: 'https://example.com/custom-mcp',
+      transport: 'sse',
+      headers: { 'X-Custom': 'preserved' },
+    }
+    await reviewer.initialize({
+      id: 'test-review-custom-parallel',
+      env: {
+        GITHUB_WORKSPACE: workspace,
+        SHIPPIE_PARALLEL_SEARCH: 'true',
+        SHIPPIE_MCP_SERVERS: JSON.stringify({ parallel: explicit }),
+      },
+    })
+    expect(connectMcpServer).toHaveBeenCalledWith('parallel', explicit)
   })
 })
 
