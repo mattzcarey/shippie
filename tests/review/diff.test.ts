@@ -73,6 +73,21 @@ describe('parseDiff', () => {
     expect(files[0].diff).not.toContain('+only')
   })
 
+  test('parses non-ASCII paths emitted when core.quotePath is disabled', () => {
+    const raw = [
+      'diff --git a/模块.ts b/模块.ts',
+      '--- a/模块.ts',
+      '+++ b/模块.ts',
+      '@@ -1 +1 @@',
+      '-old',
+      '+new',
+    ].join('\n')
+    const files = parseDiff(raw, WS)
+    expect(files).toHaveLength(1)
+    expect(files[0].fileName).toBe('/repo/模块.ts')
+    expect(files[0].changedLines).toEqual([{ start: 1, end: 1 }])
+  })
+
   test('empty diff yields no files', () => {
     expect(parseDiff('', WS)).toEqual([])
   })
@@ -81,6 +96,8 @@ describe('parseDiff', () => {
 describe('buildDiffArgs', () => {
   test('passes base/head as a three-dot range (no shell string)', () => {
     expect(buildDiffArgs(cfg({ baseSha: 'base123', headSha: 'head456' }))).toEqual([
+      '-c',
+      'core.quotePath=false',
       '-C',
       '/repo',
       'diff',
@@ -92,6 +109,8 @@ describe('buildDiffArgs', () => {
 
   test('falls back to --cached without base/head', () => {
     expect(buildDiffArgs(cfg({}))).toEqual([
+      '-c',
+      'core.quotePath=false',
       '-C',
       '/repo',
       'diff',
