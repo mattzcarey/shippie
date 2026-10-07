@@ -39,7 +39,10 @@ const assertSafeRef = (value: string, label: string): string => {
 
 /** Build the argv for `git diff` (no shell — every value is a discrete arg). */
 export const buildDiffArgs = (cfg: ReviewConfig): string[] => {
-  const args = ['-C', cfg.workspace, 'diff', ...DIFF_OPTS]
+  // Keep non-ASCII filenames readable in the patch header. Git otherwise C-quotes
+  // them by default (for example, `模块.ts` becomes `\346\250...`), which
+  // the patch parser cannot map back to the filesystem path.
+  const args = ['-c', 'core.quotePath=false', '-C', cfg.workspace, 'diff', ...DIFF_OPTS]
   if (cfg.baseSha && cfg.headSha) {
     // Three-dot range: diff from the merge-base of base..head — matches GitHub's
     // "Files changed" view and excludes changes that landed on the base branch
