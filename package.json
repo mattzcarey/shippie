@@ -54,7 +54,7 @@
     "node": ">=22.19.0"
   },
   "dependencies": {
-    "@flue/github": "1.0.0-beta.1",
+    "@flue/github": "2.3.0",
     "@flue/runtime": "1.0.0-beta.9",
     "octokit": "^3.1.0",
     "picomatch": "^4.0.2",
@@ -73,7 +73,7 @@
     "vitest": "^3.2.4"
   },
   "overrides": {
-    "hono": "^4.12.26",
+    "hono": "^4.13.13",
     "esbuild": "^0.28.1"
   },
   "files": [
